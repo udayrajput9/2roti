@@ -46,7 +46,7 @@ async function customerAuth(req, res) {
         passHash = await bcrypt.hash(password, 10);
       }
 
-      const [userId] = await db('users').insert({
+      const inserted = await db('users').insert({
         phone_number: cleanPhone,
         name: name || null,
         email: email || null,
@@ -55,7 +55,9 @@ async function customerAuth(req, res) {
         is_profile_complete: false,
         wallet_balance: 0.00,
         status: 'ACTIVE'
-      });
+      }).returning('id');
+      
+      const userId = (Array.isArray(inserted) ? (inserted[0].id || inserted[0]) : inserted) || inserted[0];
 
       user = await db('users').where({ id: userId }).first();
     } else {
@@ -158,7 +160,7 @@ async function firebaseCustomerAuth(req, res) {
     if (!user) {
       // Create new customer from Google account
       const tempPhone = `PENDING_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-      const [newUserId] = await db('users').insert({
+      const inserted = await db('users').insert({
         firebase_uid: uid || null,
         email: userEmail || null,
         name: userName || 'Google User',
@@ -166,7 +168,8 @@ async function firebaseCustomerAuth(req, res) {
         is_profile_complete: false,
         wallet_balance: 0.00,
         status: 'ACTIVE'
-      });
+      }).returning('id');
+      const newUserId = (Array.isArray(inserted) ? (inserted[0].id || inserted[0]) : inserted) || inserted[0];
       user = await db('users').where({ id: newUserId }).first();
     }
 
