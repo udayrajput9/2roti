@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://doroti.shop/api/$1"
+      "destination": "https://www.doroti.shop/api/$1"
     },
     {
       "source": "/(.*)",
