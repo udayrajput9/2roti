@@ -10,12 +10,13 @@ import {
 
 // 2 Roti Firebase Web Configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDummyKeyForBuildReplaceIfProvided",
+  apiKey: "AIzaSyDNaijXUWYm9mo51PdDZcgDL5RESEwJJkM",
   authDomain: "roti-13d2a.firebaseapp.com",
   projectId: "roti-13d2a",
-  storageBucket: "roti-13d2a.appspot.com",
+  storageBucket: "roti-13d2a.firebasestorage.app",
   messagingSenderId: "71313998646",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:71313998646:web:2rotiweb"
+  appId: "1:71313998646:web:3fc2410b57a13f04d1a997",
+  measurementId: "G-PLDET76EM8"
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
