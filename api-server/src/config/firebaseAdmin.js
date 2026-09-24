@@ -6,7 +6,7 @@ require('dotenv').config();
 let firebaseInitialized = false;
 
 try {
-  if (admin.apps.length > 0) {
+  if (admin.apps && admin.apps.length > 0) {
     firebaseInitialized = true;
   } else {
     // 1. Check for FIREBASE_SERVICE_ACCOUNT JSON string in env
@@ -55,7 +55,7 @@ async function verifyFirebaseToken(idToken) {
   if (!idToken) throw new Error('ID Token is required');
 
   try {
-    if (admin.apps.length > 0 && admin.auth) {
+    if (admin.apps && admin.apps.length > 0 && admin.auth) {
       try {
         const decoded = await admin.auth().verifyIdToken(idToken);
         return decoded;
@@ -65,10 +65,12 @@ async function verifyFirebaseToken(idToken) {
     }
 
     // Fallback: decode JWT payload if unverified or demo token
-    const parts = idToken.split('.');
-    if (parts.length === 3) {
-      const payload = Buffer.from(parts[1], 'base64').toString('utf8');
-      return JSON.parse(payload);
+    if (typeof idToken === 'string') {
+      const parts = idToken.split('.');
+      if (parts.length === 3) {
+        const payload = Buffer.from(parts[1], 'base64').toString('utf8');
+        return JSON.parse(payload);
+      }
     }
   } catch (err) {
     console.error('Token verification error:', err.message);

@@ -62,12 +62,27 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/security', securityRoutes);
 
 // Health Check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  const db = require('./config/database');
+  const { firebaseInitialized } = require('./config/firebaseAdmin');
+  
+  let dbStatus = 'UNKNOWN';
+  try {
+    await db.raw('SELECT 1');
+    dbStatus = 'CONNECTED';
+  } catch (e) {
+    dbStatus = 'ERROR: ' + e.message;
+  }
+
   res.json({
     status: 'HEALTHY',
     service: '2 Roti API Server',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    firebase_initialized: firebaseInitialized,
+    firebase_service_account_set: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+    database_url_set: !!process.env.DATABASE_URL,
+    db_status: dbStatus
   });
 });
 
