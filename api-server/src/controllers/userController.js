@@ -27,10 +27,13 @@ async function getCustomers(req, res) {
 
     return res.json({
       success: true,
-      customers: customers.map(c => ({
-        ...c,
-        wallet_balance: parseFloat(c.wallet_balance || 0)
-      }))
+      customers: customers.map(c => {
+        const { password_hash, firebase_uid, ...safeCustomer } = c;
+        return {
+          ...safeCustomer,
+          wallet_balance: parseFloat(c.wallet_balance || 0)
+        };
+      })
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to fetch customer directory.' });
@@ -82,6 +85,17 @@ async function createStaffUser(req, res) {
       return res.status(400).json({ success: false, message: 'Name, email, password, and role are required.' });
     }
 
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ success: false, message: 'Invalid email format.' });
+    }
+
+    // Password strength: minimum 8 chars, at least 1 letter and 1 number
+    if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters with at least 1 letter and 1 number.' });
+    }
+
     const validRoles = ['SUPER_ADMIN', 'ORDER_MANAGER', 'VENDOR'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({ success: false, message: 'Invalid role.' });
@@ -122,9 +136,73 @@ async function createStaffUser(req, res) {
   }
 }
 
+// 5. Admin: Manually adjust customer wallet
+async function adjustWallet(req, res) {
+  try {
+    const { id } = req.params;
+    const { amount, description } = req.body;
+
+    const parsedAmount = parseFloat(amount);
+    if (!amount || isNaN(parsedAmount)) {
+      return res.status(400).json({ success: false, message: 'Valid amount is required' });
+    }
+
+    // Cap: Max single adjustment ±5000 to prevent accidental/malicious large credits
+    if (Math.abs(parsedAmount) > 5000) {
+      return res.status(400).json({ success: false, message: 'Single wallet adjustment cannot exceed ±₹5000.' });
+    }
+
+    // Sanitize description - strip HTML tags, cap length
+    const cleanDesc = description
+      ? String(description).replace(/[<>]/g, '').trim().substring(0, 200)
+      : 'Admin adjustment';
+
+    let newBalance = 0;
+
+    await db.transaction(async (trx) => {
+      // Concurrency & Race-condition Guard: Lock user row with forUpdate()
+      const user = await trx('users').where({ id }).forUpdate().first();
+      if (!user) {
+        throw new Error('USER_NOT_FOUND');
+      }
+
+      newBalance = parseFloat(user.wallet_balance || 0) + parsedAmount;
+      if (newBalance < 0) {
+        throw new Error('NEGATIVE_BALANCE');
+      }
+
+      await trx('users').where({ id }).update({
+        wallet_balance: newBalance,
+        updated_at: db.fn.now()
+      });
+
+      // Schema-aligned insert with exact column names (type, amount, balance_after, note)
+      await trx('wallet_transactions').insert({
+        user_id: parseInt(id),
+        type: 'admin_adjustment',
+        amount: Math.abs(parsedAmount),
+        balance_after: newBalance,
+        note: `${parsedAmount >= 0 ? 'Credit' : 'Debit'}: ${cleanDesc}`
+      });
+    });
+
+    return res.json({ success: true, message: 'Wallet updated successfully', newBalance });
+  } catch (err) {
+    if (err.message === 'USER_NOT_FOUND') {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    if (err.message === 'NEGATIVE_BALANCE') {
+      return res.status(400).json({ success: false, message: 'Deduction would result in negative wallet balance.' });
+    }
+    console.error('adjustWallet error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to adjust wallet' });
+  }
+}
+
 module.exports = {
   getCustomers,
   toggleCustomerStatus,
   getStaffList,
-  createStaffUser
+  createStaffUser,
+  adjustWallet
 };

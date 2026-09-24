@@ -12,7 +12,10 @@
     "start:website": "cd website && npm run dev",
     "start:admin": "cd admin-web && npm run dev",
     "seed": "cd api-server && npm run seed",
-    "seed:supabase": "node api-server/src/models/seed.js"
+    "seed:supabase": "node api-server/src/models/seed.js",
+    "optimize:images": "node scripts/optimize_all_images.js",
+    "test:apis": "node scripts/test_all_apis.js",
+    "evaluate:seo": "node scripts/evaluate_seo.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -39,5 +42,8 @@
     "razorpay",
     "websockets",
     "supabase"
-  ]
+  ],
+  "devDependencies": {
+    "sharp": "^0.35.4"
+  }
 }

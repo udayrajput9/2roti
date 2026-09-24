@@ -2,16 +2,16 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { requireCustomer, requireStaffRole } = require('../middleware/authMiddleware');
-const { antiBotCheck } = require('../middleware/antiBotMiddleware');
+const { antiBotCheck, authLimiter } = require('../middleware/antiBotMiddleware');
 
-// Customer Auth
-router.post('/customer', antiBotCheck, authController.customerAuth);
-router.post('/customer/firebase', antiBotCheck, authController.firebaseCustomerAuth);
+// Customer Auth — authLimiter prevents brute-force at scale
+router.post('/customer', authLimiter, antiBotCheck, authController.customerAuth);
+router.post('/customer/firebase', authLimiter, antiBotCheck, authController.firebaseCustomerAuth);
 router.post('/complete-profile', requireCustomer, authController.completeProfile);
 router.get('/customer/me', requireCustomer, authController.getCustomerMe);
 
-// Staff Auth (Super Admin, Order Manager, Vendor)
-router.post('/staff/login', antiBotCheck, authController.staffLogin);
+// Staff Auth — tighter auth limiter for admin login
+router.post('/staff/login', authLimiter, antiBotCheck, authController.staffLogin);
 router.get('/staff/me', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER', 'VENDOR']), authController.getStaffMe);
 
 // Logout

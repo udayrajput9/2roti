@@ -89,19 +89,33 @@ async function uploadMenuCsv(req, res) {
     let updatedCount = 0;
 
     await db.transaction(async (trx) => {
+      // Data Structure & Algorithm Optimization:
+      // Pre-fetch existing menu items in 1 query and index with Map (O(1) lookup)
+      // Eliminates 2*N sequential DB roundtrips (from O(N) DB trips to O(1) batch)
+      const existingItems = await trx('menu_items').select('id', 'name');
+      const existingMap = new Map();
+      existingItems.forEach(i => existingMap.set(i.name.toLowerCase().trim(), i.id));
+
+      const itemsToInsert = [];
+      const updatePromises = [];
+
       for (const item of items) {
-        const existing = await trx('menu_items').where({ name: item.name }).first();
-        if (existing) {
-          await trx('menu_items').where({ id: existing.id }).update({
-            category: item.category,
-            customer_price: item.customer_price,
-            vendor_cost: item.vendor_cost,
-            is_veg: item.is_veg,
-            is_outlet_only: true
-          });
+        const key = item.name.toLowerCase().trim();
+        const existingId = existingMap.get(key);
+
+        if (existingId) {
+          updatePromises.push(
+            trx('menu_items').where({ id: existingId }).update({
+              category: item.category,
+              customer_price: item.customer_price,
+              vendor_cost: item.vendor_cost,
+              is_veg: item.is_veg,
+              is_outlet_only: true
+            })
+          );
           updatedCount++;
         } else {
-          await trx('menu_items').insert({
+          itemsToInsert.push({
             name: item.name,
             category: item.category,
             customer_price: item.customer_price,
@@ -113,13 +127,23 @@ async function uploadMenuCsv(req, res) {
         }
       }
 
+      // Batch insert new items in 1 query
+      if (itemsToInsert.length > 0) {
+        await trx('menu_items').insert(itemsToInsert);
+      }
+
+      // Execute updates in parallel chunks
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises);
+      }
+
       // Record in menu_upload_audits
       await trx('menu_upload_audits').insert({
         admin_id: req.staff.id,
         filename: req.file ? req.file.originalname : 'direct_text_upload.csv',
         items_added: addedCount,
         items_updated: updatedCount,
-        snapshot_json: JSON.stringify(items.slice(0, 50)) // sample snapshot
+        snapshot_json: JSON.stringify(items.slice(0, 50))
       });
     });
 
@@ -351,14 +375,17 @@ async function getAllLocationsAdmin(req, res) {
   try {
     const locations = await db('locations').orderBy('id', 'asc');
     
-    // Attach order counts
-    const enriched = await Promise.all(locations.map(async (loc) => {
-      const orderCountRow = await db('orders').where({ location_id: loc.id }).count('id as cnt').first();
-      return {
-        ...loc,
-        is_active: !!loc.is_active,
-        total_orders: parseInt(orderCountRow?.cnt || 0)
-      };
+    // Performance Fix: 1 single GROUP BY query instead of N individual count(*) queries
+    const counts = await db('orders')
+      .select('location_id')
+      .count('id as cnt')
+      .groupBy('location_id');
+
+    const countMap = new Map(counts.map(c => [c.location_id, parseInt(c.cnt || 0)]));
+    const enriched = locations.map(loc => ({
+      ...loc,
+      is_active: !!loc.is_active,
+      total_orders: countMap.get(loc.id) || 0
     }));
 
     return res.json({ success: true, locations: enriched });

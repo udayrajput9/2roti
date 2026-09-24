@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const { initSchema } = require('./models/schema');
 const { initWebSocket } = require('./services/socketService');
+const { apiLimiter } = require('./middleware/antiBotMiddleware');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -48,10 +49,13 @@ app.use(cors({
 
 // 3. Body & Cookie Parsing
 app.use(cookieParser());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '100kb' })); // Mitigates JSON parse Event Loop blocking DoS
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
-// 4. Mount API Routes
+// 4. Global Rate Limiting (Applied to all /api/* routes)
+app.use('/api/', apiLimiter);
+
+// 5. Mount API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
@@ -60,6 +64,9 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/vendor', vendorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/security', securityRoutes);
+
+// Public Settings Route
+app.get('/api/settings', require('./controllers/statsController').getPublicSettings);
 
 // Health Check
 app.get('/api/health', async (req, res) => {

@@ -84,8 +84,12 @@ export default function VendorSettlements() {
     try {
       setLoading(true);
 
-      // 1. Fetch Day-Wise Reports
-      const reportsRes = await fetch('/api/vendor/daily-reports', { credentials: 'include' });
+      // Concurrency Optimization: Parallel network requests via Promise.all
+      const [reportsRes, sumRes] = await Promise.all([
+        fetch('/api/vendor/daily-reports', { credentials: 'include' }),
+        fetch('/api/vendor/summary', { credentials: 'include' })
+      ]);
+
       if (reportsRes.ok) {
         const reportsData = await reportsRes.json();
         if (reportsData.success) {
@@ -96,8 +100,6 @@ export default function VendorSettlements() {
         }
       }
 
-      // 2. Fetch General Financial Summary
-      const sumRes = await fetch('/api/vendor/summary', { credentials: 'include' });
       if (sumRes.ok) {
         const sumData = await sumRes.json();
         if (sumData.success) {

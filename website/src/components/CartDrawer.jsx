@@ -218,8 +218,10 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }) {
                               <img
                                 src={addon.image_url}
                                 alt={addon.displayName}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-cover"
-                                onError={(e) => { e.target.src = '/images/food/tandoori_roti.jpg'; }}
+                                onError={(e) => { e.target.src = '/images/food/tandoori_roti.webp'; }}
                               />
                             </div>
                             <div className="min-w-0 flex-1">

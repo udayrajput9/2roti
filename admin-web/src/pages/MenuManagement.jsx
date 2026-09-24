@@ -693,6 +693,8 @@ export default function MenuManagement() {
                                 <img
                                   src={item.image_url}
                                   alt={item.name}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-10 h-10 rounded-xl object-cover border border-slate-700 shrink-0 bg-slate-800"
                                   onError={(e) => { e.target.style.display = 'none'; }}
                                 />

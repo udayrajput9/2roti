@@ -15,22 +15,30 @@ async function getVendorSummary(req, res) {
 
     const allDelivered = await ordersQuery;
 
-    // Unsettled (Pending Payout)
-    const unsettled = allDelivered.filter(o => !o.settlement_id);
-    const settled = allDelivered.filter(o => o.settlement_id);
+    // Algorithm Optimization: Single-Pass Accumulator O(N) replaces 9 separate filter/reduce scans
+    let pendingPayable = 0;
+    let totalLifetimeEarned = 0;
+    let totalSettledPaid = 0;
+    let razorpayFunded = 0;
+    let walletFunded = 0;
+    const unsettled = [];
+    let settledCount = 0;
 
-    const pendingPayable = unsettled.reduce((sum, o) => sum + parseFloat(o.total_vendor_cost || 0), 0);
-    const totalLifetimeEarned = allDelivered.reduce((sum, o) => sum + parseFloat(o.total_vendor_cost || 0), 0);
-    const totalSettledPaid = settled.reduce((sum, o) => sum + parseFloat(o.total_vendor_cost || 0), 0);
+    for (let i = 0; i < allDelivered.length; i++) {
+      const o = allDelivered[i];
+      const cost = parseFloat(o.total_vendor_cost || 0);
+      totalLifetimeEarned += cost;
 
-    // Funding split for unsettled orders
-    const razorpayFunded = unsettled
-      .filter(o => o.payment_source === 'razorpay')
-      .reduce((sum, o) => sum + parseFloat(o.total_vendor_cost || 0), 0);
-
-    const walletFunded = unsettled
-      .filter(o => o.payment_source === 'wallet')
-      .reduce((sum, o) => sum + parseFloat(o.total_vendor_cost || 0), 0);
+      if (o.settlement_id) {
+        settledCount++;
+        totalSettledPaid += cost;
+      } else {
+        unsettled.push(o);
+        pendingPayable += cost;
+        if (o.payment_source === 'razorpay') razorpayFunded += cost;
+        else if (o.payment_source === 'wallet') walletFunded += cost;
+      }
+    }
 
     const sanitizedUnsettled = (staff.role === 'VENDOR'
       ? unsettled.slice(0, 50).map(o => {
@@ -46,7 +54,7 @@ async function getVendorSummary(req, res) {
         total_lifetime_earned: totalLifetimeEarned,
         total_settled_paid: totalSettledPaid,
         unsettled_orders_count: unsettled.length,
-        settled_orders_count: settled.length,
+        settled_orders_count: settledCount,
         razorpay_funded_amount: razorpayFunded,
         wallet_funded_amount: walletFunded
       },
@@ -229,11 +237,18 @@ async function getDailySettlementReports(req, res) {
     // 4. Group orders by Day (YYYY-MM-DD) and Vendor
     const dailyBuckets = new Map();
 
+    // Data Structure Optimization: Pre-index vendors by outlet_location_id for O(1) lookup
+    const vendorByLocationMap = new Map();
+    vendors.forEach(v => {
+      if (v.outlet_location_id) vendorByLocationMap.set(v.outlet_location_id, v);
+    });
+
     allOrders.forEach(o => {
       const orderDate = (o.created_at || '').substring(0, 10);
       if (!orderDate) return;
 
-      let assignedVendor = vendors.find(v => v.outlet_location_id === o.location_id) || defaultVendor;
+      // O(1) Map lookup vs O(V) array scan
+      let assignedVendor = vendorByLocationMap.get(o.location_id) || defaultVendor;
       if (staff.role === 'VENDOR' && staff.id !== assignedVendor.id) {
         return;
       }
@@ -374,7 +389,7 @@ async function markDailySettlementPaid(req, res) {
         is_test_simulated: false
       })
       .where('payment_status', '!=', 'REFUNDED')
-      .whereRaw("strftime('%Y-%m-%d', created_at) = ?", [date]);
+      .whereRaw("DATE(created_at) = ?", [date]);
 
     if (vendor.outlet_location_id) {
       ordersQuery = ordersQuery.andWhere({ location_id: vendor.outlet_location_id });
@@ -401,7 +416,7 @@ async function markDailySettlementPaid(req, res) {
     await db.transaction(async (trx) => {
       const existing = await trx('vendor_settlements')
         .where({ vendor_id: vendor.id })
-        .whereRaw("strftime('%Y-%m-%d', period_start) = ?", [date])
+        .whereRaw("DATE(period_start) = ?", [date])
         .first();
 
       if (existing) {
@@ -472,7 +487,7 @@ async function revertDailySettlementToPending(req, res) {
     } else if (vendor_id && date) {
       settlement = await db('vendor_settlements')
         .where({ vendor_id: vendor_id })
-        .whereRaw("strftime('%Y-%m-%d', period_start) = ?", [date])
+        .whereRaw("DATE(period_start) = ?", [date])
         .first();
     }
 
@@ -530,7 +545,7 @@ async function getDailyReportDetail(req, res) {
     // Fetch all orders on this date for this vendor/location
     let ordersQuery = db('orders')
       .where({ is_test_simulated: false })
-      .whereRaw("strftime('%Y-%m-%d', created_at) = ?", [date])
+      .whereRaw("DATE(created_at) = ?", [date])
       .orderBy('created_at', 'asc');
 
     if (vendor.outlet_location_id) {
@@ -550,14 +565,17 @@ async function getDailyReportDetail(req, res) {
     const itemsByOrderId = new Map();
     const dishTallyMap = new Map();
 
+    // Bug Fix: Build O(1) Map for parentOrder lookup (was O(n²) with .find() inside forEach)
+    const dayOrdersMap = new Map(dayOrders.map(o => [o.id, o]));
+
     orderItems.forEach(item => {
       if (!itemsByOrderId.has(item.order_id)) {
         itemsByOrderId.set(item.order_id, []);
       }
       itemsByOrderId.get(item.order_id).push(item);
 
-      // Check if order was delivered
-      const parentOrder = dayOrders.find(o => o.id === item.order_id);
+      // Check if order was delivered — O(1) lookup
+      const parentOrder = dayOrdersMap.get(item.order_id);
       const isDelivered = parentOrder && parentOrder.order_status === 'DELIVERED' && parentOrder.payment_status !== 'REFUNDED';
       
       // Dish tally
@@ -583,7 +601,7 @@ async function getDailyReportDetail(req, res) {
     // Check settlement record
     const settlement = await db('vendor_settlements')
       .where({ vendor_id: vendor.id })
-      .whereRaw("strftime('%Y-%m-%d', period_start) = ?", [date])
+      .whereRaw("DATE(period_start) = ?", [date])
       .first();
 
     let deliveredCount = 0;
@@ -692,3 +710,5 @@ module.exports = {
   markDailySettlementPaid,
   revertDailySettlementToPending
 };
+
+

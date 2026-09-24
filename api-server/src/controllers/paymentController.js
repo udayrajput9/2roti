@@ -1,9 +1,15 @@
 const crypto = require('crypto');
 const db = require('../config/database');
+const Razorpay = require('razorpay');
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_2rotiDemoKey123';
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_2rotiDemoSecret456';
 const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || 'rzp_whsec_2rotiDemoWebhookSecret789';
+
+const razorpay = new Razorpay({
+  key_id: RAZORPAY_KEY_ID,
+  key_secret: RAZORPAY_KEY_SECRET,
+});
 
 // 1. Create Razorpay Order
 async function createRazorpayOrder(req, res) {
@@ -13,12 +19,23 @@ async function createRazorpayOrder(req, res) {
       return res.status(400).json({ success: false, message: 'Valid amount is required.' });
     }
 
-    // In local/test mode, create a standard mock Razorpay order ID
-    const mockRzpOrderId = `order_${crypto.randomBytes(8).toString('hex')}`;
+    // Only mock if keys are the hardcoded demo keys, otherwise create real order
+    let rzpOrderId;
+    if (RAZORPAY_KEY_ID === 'rzp_test_2rotiDemoKey123') {
+      rzpOrderId = `order_${crypto.randomBytes(8).toString('hex')}`;
+    } else {
+      const orderParams = {
+        amount: Math.round(amount * 100), // amount in smallest currency unit (paise)
+        currency,
+        receipt: receipt || `receipt_${Date.now()}`
+      };
+      const rzpOrder = await razorpay.orders.create(orderParams);
+      rzpOrderId = rzpOrder.id;
+    }
 
     return res.json({
       success: true,
-      razorpay_order_id: mockRzpOrderId,
+      razorpay_order_id: rzpOrderId,
       amount: Math.round(amount * 100), // in paise
       currency,
       key_id: RAZORPAY_KEY_ID
@@ -34,13 +51,35 @@ async function verifyPayment(req, res) {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, internal_order_id } = req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id) {
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({ success: false, message: 'Payment details incomplete.' });
+    }
+
+    // Verify signature only if not using mock keys
+    if (RAZORPAY_KEY_ID !== 'rzp_test_2rotiDemoKey123') {
+      const body = razorpay_order_id + "|" + razorpay_payment_id;
+      const expectedSignature = crypto
+        .createHmac("sha256", RAZORPAY_KEY_SECRET)
+        .update(body.toString())
+        .digest("hex");
+
+      if (expectedSignature !== razorpay_signature) {
+        return res.status(400).json({ success: false, message: 'Invalid payment signature.' });
+      }
     }
 
     // Update order status to PAID
     if (internal_order_id) {
-      await db('orders').where({ id: internal_order_id }).update({
+      // Bug Fix: IDOR — verify order belongs to this user before updating payment status
+      const order = await db('orders').where({ id: internal_order_id }).first();
+      if (!order) {
+        return res.status(404).json({ success: false, message: 'Order not found.' });
+      }
+      if (order.user_id !== req.user.id) {
+        return res.status(403).json({ success: false, message: 'Forbidden: This order does not belong to you.' });
+      }
+
+      await db('orders').where({ id: internal_order_id, user_id: req.user.id }).update({
         razorpay_order_id,
         razorpay_payment_id,
         payment_status: 'PAID',
@@ -62,6 +101,19 @@ async function handleWebhook(req, res) {
   try {
     const signature = req.headers['x-razorpay-signature'];
     const event = req.body;
+
+    if (!signature) {
+      return res.status(400).json({ success: false, message: 'Missing signature.' });
+    }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', RAZORPAY_WEBHOOK_SECRET)
+      .update(JSON.stringify(req.body))
+      .digest('hex');
+
+    if (expectedSignature !== signature) {
+      return res.status(400).json({ success: false, message: 'Invalid webhook signature.' });
+    }
 
     const eventId = event.event_id || (event.payload && event.payload.payment && event.payload.payment.entity ? event.payload.payment.entity.id : `evt_${Date.now()}`);
     const eventType = event.event || 'unknown';
@@ -166,6 +218,16 @@ async function processRefund(req, res) {
       return res.status(400).json({ success: false, message: 'Order is already refunded.' });
     }
 
+    // Bug Fix: Don't allow refund on cancelled orders — they were never fulfilled
+    if (order.order_status === 'CANCELLED') {
+      return res.status(400).json({ success: false, message: 'Cancelled orders cannot be refunded. No payment was captured.' });
+    }
+
+    // Only refund orders that have been paid
+    if (order.payment_status !== 'PAID') {
+      return res.status(400).json({ success: false, message: 'Only PAID orders can be refunded.' });
+    }
+
     const refundAmount = parseFloat(order.total_customer_price) + parseFloat(order.delivery_fee || 0);
 
     await db.transaction(async (trx) => {
@@ -237,11 +299,14 @@ async function processRefund(req, res) {
 // 6. Get Payment & Webhook Logs
 async function getPaymentLogs(req, res) {
   try {
-    const webhooks = await db('webhook_logs').orderBy('processed_at', 'desc').limit(50);
-    const paidOrders = await db('orders')
-      .whereIn('payment_status', ['PAID', 'REFUNDED'])
-      .orderBy('updated_at', 'desc')
-      .limit(50);
+    // Concurrency Optimization: Parallel DB fetch cuts network latency in half
+    const [webhooks, paidOrders] = await Promise.all([
+      db('webhook_logs').orderBy('processed_at', 'desc').limit(50),
+      db('orders')
+        .whereIn('payment_status', ['PAID', 'REFUNDED'])
+        .orderBy('updated_at', 'desc')
+        .limit(50)
+    ]);
 
     return res.json({
       success: true,

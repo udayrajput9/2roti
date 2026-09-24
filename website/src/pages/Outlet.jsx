@@ -8,7 +8,7 @@ import { useCart } from '../context/CartContext';
 export default function OutletPage({ outletItems = [], onGoHome }) {
   const [hasConfirmedProximity, setHasConfirmedProximity] = useState(false);
   const [showModal, setShowModal] = useState(true);
-  const { cartItems, addToCart, updateQuantity } = useCart();
+  const { cartItems, addToCart, updateQuantity, getItemQty, sysSettings } = useCart();
 
   useEffect(() => {
     if (!hasConfirmedProximity) {
@@ -53,8 +53,8 @@ export default function OutletPage({ outletItems = [], onGoHome }) {
               </span>
             </div>
             
-            <p className="text-xs text-neutral-200 mt-1.5 leading-relaxed font-medium">
-              "Aap tabhi order karein jab aap humare outlet pe ho. Agar outlet ke paas nahi hai jo ki <strong className="text-[#FF7043]">Jhungiya</strong> me hai toh aap delivery section me order karein."
+            <p className="text-xs text-neutral-200 mt-1.5 leading-relaxed font-medium">{
+              sysSettings?.outlet_info?.subtitle || "Aap tabhi order karein jab aap humare outlet pe ho. Agar outlet ke paas nahi hai jo ki Jhungiya me hai toh aap delivery section me order karein."}
             </p>
 
             <div className="mt-2.5 text-[11px] text-[#FFB74D] flex items-center gap-1.5 font-bold">
@@ -77,8 +77,7 @@ export default function OutletPage({ outletItems = [], onGoHome }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {outletItems.map((item) => {
-            const inCart = cartItems.find(i => i.id === item.id);
-            const qty = inCart?.quantity || 0;
+            const qty = getItemQty(item.id);
             const imageUrl = getDishImage(item);
             const isVeg = item.is_veg === 1 || item.is_veg === true;
 
@@ -123,9 +122,10 @@ export default function OutletPage({ outletItems = [], onGoHome }) {
                       src={imageUrl}
                       alt={item.name}
                       loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
-                        e.target.src = '/images/food/veg_thali.jpg';
+                        e.target.src = '/images/food/veg_thali.webp';
                       }}
                     />
                   </div>
@@ -169,3 +169,6 @@ export default function OutletPage({ outletItems = [], onGoHome }) {
     </div>
   );
 }
+
+
+

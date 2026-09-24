@@ -4,64 +4,64 @@
  */
 export const DISH_IMAGES = {
   // Thalis
-  'chicken thali': '/images/food/chicken_thali.jpg',
-  'chicken thali (outlet)': '/images/food/chicken_thali_outlet.jpg',
-  'veg thali': '/images/food/veg_thali.jpg',
-  'sada thali': '/images/food/sada_thali.jpg',
-  'paneer thali': '/images/food/paneer_thali.jpg',
-  'mutton thali': '/images/food/mutton_thali.jpg',
+  'chicken thali': '/images/food/chicken_thali.webp',
+  'chicken thali (outlet)': '/images/food/chicken_thali_outlet.webp',
+  'veg thali': '/images/food/veg_thali.webp',
+  'sada thali': '/images/food/sada_thali.webp',
+  'paneer thali': '/images/food/paneer_thali.webp',
+  'mutton thali': '/images/food/mutton_thali.webp',
 
   // Curries
-  'chicken curry': '/images/food/chicken_curry.jpg',
-  'chicken kari': '/images/food/chicken_kari.jpg',
-  'vegetable curry': '/images/food/vegetable_curry.jpg',
-  'paneer curry': '/images/food/paneer_curry.jpg',
-  'mattar panner': '/images/food/mattar_paneer.jpg',
-  'special paneer do pyaza': '/images/food/special_paneer_do_pyaza.jpg',
-  'mutton curry': '/images/food/mutton_curry.jpg',
-  'mutton kari': '/images/food/mutton_kari.jpg',
-  'egg kari': '/images/food/egg_kari.jpg',
-  'sadi sabji': '/images/food/sadi_sabji.jpg',
+  'chicken curry': '/images/food/chicken_curry.webp',
+  'chicken kari': '/images/food/chicken_kari.webp',
+  'vegetable curry': '/images/food/vegetable_curry.webp',
+  'paneer curry': '/images/food/paneer_curry.webp',
+  'mattar panner': '/images/food/mattar_paneer.webp',
+  'special paneer do pyaza': '/images/food/special_paneer_do_pyaza.webp',
+  'mutton curry': '/images/food/mutton_curry.webp',
+  'mutton kari': '/images/food/mutton_kari.webp',
+  'egg kari': '/images/food/egg_kari.webp',
+  'sadi sabji': '/images/food/sadi_sabji.webp',
 
   // Biryanis
-  'veg biryani': '/images/food/veg_biryani.jpg',
-  'veg biryani (outlet)': '/images/food/veg_biryani_outlet.jpg',
-  'chicken biryani': '/images/food/chicken_biryani.jpg',
-  'chicken biryani (outlet)': '/images/food/chicken_biryani_outlet.jpg',
-  'egg biryani': '/images/food/egg_biryani.jpg',
-  'egg biryani (outlet)': '/images/food/egg_biryani_outlet.jpg',
+  'veg biryani': '/images/food/veg_biryani.webp',
+  'veg biryani (outlet)': '/images/food/veg_biryani_outlet.webp',
+  'chicken biryani': '/images/food/chicken_biryani.webp',
+  'chicken biryani (outlet)': '/images/food/chicken_biryani_outlet.webp',
+  'egg biryani': '/images/food/egg_biryani.webp',
+  'egg biryani (outlet)': '/images/food/egg_biryani_outlet.webp',
 
   // Pizzas
-  'paneer pizza': '/images/food/paneer_pizza.jpg',
-  'paneer pizza (outlet)': '/images/food/paneer_pizza_outlet.jpg',
-  'onion pizza': '/images/food/onion_pizza.jpg',
-  'onion pizza (outlet)': '/images/food/onion_pizza_outlet.jpg',
+  'paneer pizza': '/images/food/paneer_pizza.webp',
+  'paneer pizza (outlet)': '/images/food/paneer_pizza_outlet.webp',
+  'onion pizza': '/images/food/onion_pizza.webp',
+  'onion pizza (outlet)': '/images/food/onion_pizza_outlet.webp',
 
   // Breads & Indian Combos
-  'aalu paratha': '/images/food/aalu_paratha.jpg',
-  'lacchha paratha': '/images/food/lacchha_paratha.jpg',
-  'tandoori roti': '/images/food/tandoori_roti.jpg',
-  'chola bhatura(full)': '/images/food/chola_bhatura.jpg',
-  'puri sabji': '/images/food/puri_sabji.jpg',
-  'masala kulcha': '/images/food/masala_kulcha.jpg',
-  'chawal+roti(pack)': '/images/food/chawal_roti_pack.jpg',
+  'aalu paratha': '/images/food/aalu_paratha.webp',
+  'lacchha paratha': '/images/food/lacchha_paratha.webp',
+  'tandoori roti': '/images/food/tandoori_roti.webp',
+  'chola bhatura(full)': '/images/food/chola_bhatura.webp',
+  'puri sabji': '/images/food/puri_sabji.webp',
+  'masala kulcha': '/images/food/masala_kulcha.webp',
+  'chawal+roti(pack)': '/images/food/chawal_roti_pack.webp',
 
   // Rice
-  'fried rice': '/images/food/fried_rice.jpg',
-  'chicken rice': '/images/food/chicken_rice.jpg',
-  'paneer rice': '/images/food/paneer_rice.jpg',
+  'fried rice': '/images/food/fried_rice.webp',
+  'chicken rice': '/images/food/chicken_rice.webp',
+  'paneer rice': '/images/food/paneer_rice.webp',
 
   // Rolls
-  'egg roll': '/images/food/egg_roll.jpg',
-  'chicken roll': '/images/food/chicken_roll.jpg',
-  'paneer roll': '/images/food/paneer_roll.jpg',
-  'veg roll': '/images/food/veg_roll.jpg'
+  'egg roll': '/images/food/egg_roll.webp',
+  'chicken roll': '/images/food/chicken_roll.webp',
+  'paneer roll': '/images/food/paneer_roll.webp',
+  'veg roll': '/images/food/veg_roll.webp'
 };
 
 export function getDishImage(item) {
-  // If item provides a valid local /images/food/ path, use it directly
+  // If item provides a valid local /images/food/ path, prefer .webp for maximum speed
   if (item?.image_url && item.image_url.startsWith('/images/food/')) {
-    return item.image_url;
+    return item.image_url.replace(/\.(jpg|jpeg|png)$/i, '.webp');
   }
 
   const nameKey = (item?.name || '').toLowerCase().trim();
@@ -125,5 +125,5 @@ export function getDishImage(item) {
   if (nameKey.includes('paneer rice')) return DISH_IMAGES['paneer rice'];
   if (nameKey.includes('fried rice')) return DISH_IMAGES['fried rice'];
 
-  return '/images/food/veg_thali.jpg';
+  return '/images/food/veg_thali.webp';
 }

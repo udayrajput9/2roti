@@ -10,6 +10,7 @@ router.get('/dashboard-stats', requireStaffRole(['SUPER_ADMIN']), statsControlle
 // Customer directory
 router.get('/customers', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER']), userController.getCustomers);
 router.patch('/customers/:id/toggle-status', requireStaffRole(['SUPER_ADMIN']), userController.toggleCustomerStatus);
+router.post('/customers/:id/wallet', requireStaffRole(['SUPER_ADMIN']), userController.adjustWallet);
 
 // Staff RBAC management
 router.get('/staff-users', requireStaffRole(['SUPER_ADMIN']), userController.getStaffList);

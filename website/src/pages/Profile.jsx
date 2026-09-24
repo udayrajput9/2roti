@@ -45,7 +45,7 @@ export default function ProfilePage({
   onOpenCart 
 }) {
   const { user, isAuthenticated, logout, refreshUser, updateProfile } = useAuth();
-  const { addToCart } = useCart();
+  const { addToCart, sysSettings } = useCart();
 
   const [activeTab, setActiveTab] = useState('ORDERS'); // ORDERS | WALLET | ADDRESS | HELP
   const [orderFilter, setOrderFilter] = useState('ALL'); // ALL | ACTIVE | DELIVERED | CANCELLED
@@ -1021,29 +1021,7 @@ export default function ProfilePage({
               Frequently Asked Questions (FAQs)
             </h3>
 
-            <div className="space-y-2">
-              {[
-                {
-                  q: "How does the ₹3 cashback per order work?",
-                  a: "Every time you order with online payment (Razorpay / UPI), ₹3 is automatically credited to your 2 Roti Loyalty Wallet as soon as the order is marked Delivered. Once your wallet reaches ₹50, you can use 100% of it to get completely free meals!"
-                },
-                {
-                  q: "When do I get Free Campus Delivery?",
-                  a: "All campus orders of ₹100 and above get 100% Free Campus Delivery to Buddha, KIPM, and ITM gates. For orders below ₹100, a small ₹15 campus runner delivery charge applies."
-                },
-                {
-                  q: "How does Outlet Pickup work at Jhungiya?",
-                  a: "You can place an outlet pickup order in advance. Outlet items (like Outlet Special Pizzas and Biryanis) have zero delivery fees and can be collected hot and fresh at our Jhungiya counter."
-                },
-                {
-                  q: "What if my delivery is delayed?",
-                  a: "You can track the live status on this profile page. If your runner is on the way, their phone number is displayed on your active order card so you can call them directly, or chat with us on WhatsApp."
-                },
-                {
-                  q: "Are Veg and Non-Veg items prepared separately?",
-                  a: "Yes! 2 Roti maintains strict separate kitchen workstations and utensils for all pure vegetarian dishes and non-veg curries/biryanis."
-                }
-              ].map((faq, idx) => {
+            <div className="space-y-2">{(sysSettings?.faq_list || []).map((faq, idx) => {
                 const isOpen = openFaqIndex === idx;
                 return (
                   <div
@@ -1216,3 +1194,4 @@ export default function ProfilePage({
     </div>
   );
 }
+

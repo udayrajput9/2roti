@@ -50,29 +50,75 @@ export function CartProvider({ children }) {
     setCartItems([]);
   };
 
-  const totalCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
-  const itemsTotal = cartItems.reduce((sum, i) => sum + (parseFloat(i.customer_price) * i.quantity), 0);
-  
-  // Check if cart contains only outlet items (outlet pickup) vs campus delivery
-  // If order contains regular delivery items (like Chicken Curry + Tandoori Roti), it's a delivery order
-  const hasDeliveryItems = cartItems.some(i => !(i.is_outlet_only === 1 || i.is_outlet_only === true));
-  const hasOutletItems = cartItems.length > 0 && !hasDeliveryItems;
+  const [sysSettings, setSysSettings] = useState({ delivery_fee: 15, free_delivery_threshold: 100 });
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.settings) {
+          setSysSettings({
+            ...d.settings,
+            delivery_fee: parseFloat(d.settings.delivery_fee) || 15,
+            free_delivery_threshold: parseFloat(d.settings.free_delivery_threshold) || 100,
+          });
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  // Algorithm Optimization: useMemo + Single-Pass Accumulator O(N)
+  // Replaces 3 separate array passes (reduce, reduce, some) and caches value across non-cart re-renders
+  const { totalCount, itemsTotal, hasOutletItems } = React.useMemo(() => {
+    let count = 0;
+    let total = 0;
+    let hasDelivery = false;
+
+    for (let i = 0; i < cartItems.length; i++) {
+      const item = cartItems[i];
+      count += item.quantity;
+      total += (parseFloat(item.customer_price) || 0) * item.quantity;
+      if (!(item.is_outlet_only === 1 || item.is_outlet_only === true)) {
+        hasDelivery = true;
+      }
+    }
+
+    return {
+      totalCount: count,
+      itemsTotal: total,
+      hasOutletItems: cartItems.length > 0 && !hasDelivery
+    };
+  }, [cartItems]);
   
   // Delivery Fee calculation
-  // Outlet order: 0 delivery fee
-  // Campus order: 0 if itemsTotal >= 100, else 15
-  const deliveryFee = hasOutletItems ? 0 : (itemsTotal >= 100 || itemsTotal === 0 ? 0 : 15);
+  // Outlet order: 0 delivery fee; Campus order: 0 if itemsTotal >= threshold, else fee
+  const deliveryFee = hasOutletItems ? 0 : (itemsTotal >= sysSettings.free_delivery_threshold || itemsTotal === 0 ? 0 : sysSettings.delivery_fee);
   const grandTotal = itemsTotal + deliveryFee;
+
+  // Data Structure Optimization: O(1) Map hash index for instant item quantity queries
+  const cartQtyMap = React.useMemo(() => {
+    const map = new Map();
+    for (let i = 0; i < cartItems.length; i++) {
+      map.set(cartItems[i].id, cartItems[i].quantity);
+    }
+    return map;
+  }, [cartItems]);
+
+  const getItemQty = React.useCallback((id) => {
+    return cartQtyMap.get(id) || 0;
+  }, [cartQtyMap]);
 
   return (
     <CartContext.Provider
       value={{
+        sysSettings,
         cartItems,
         totalCount,
         itemsTotal,
         deliveryFee,
         grandTotal,
         hasOutletItems,
+        getItemQty,
         addToCart,
         removeFromCart,
         updateQuantity,

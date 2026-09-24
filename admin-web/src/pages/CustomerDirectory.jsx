@@ -7,6 +7,11 @@ export default function CustomerDirectory() {
   const [campusFilter, setCampusFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
 
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [walletAmount, setWalletAmount] = useState('');
+  const [walletDesc, setWalletDesc] = useState('');
+
   const loadCustomers = async () => {
     try {
       setLoading(true);
@@ -45,6 +50,31 @@ export default function CustomerDirectory() {
       }
     } catch (e) {
       alert('Failed to update customer status');
+    }
+  };
+
+  const handleWalletAdjustSubmit = async (e) => {
+    e.preventDefault();
+    if (!walletAmount || isNaN(walletAmount)) return;
+    
+    try {
+      const res = await fetch(`/api/admin/customers/${selectedCustomer.id}/wallet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: walletAmount, description: walletDesc })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCustomers(prev => prev.map(c => c.id === selectedCustomer.id ? { ...c, wallet_balance: data.newBalance } : c));
+        setWalletModalOpen(false);
+        setSelectedCustomer(null);
+        setWalletAmount('');
+        setWalletDesc('');
+      } else {
+        alert(data.message || 'Wallet update failed');
+      }
+    } catch (e) {
+      alert('Error updating wallet');
     }
   };
 
@@ -131,8 +161,15 @@ export default function CustomerDirectory() {
                           <span>{c.campus_name || 'Not Selected'}</span>
                         </span>
                       </td>
-                      <td className="py-3 font-bold text-emerald-400 font-mono">
+                      <td className="py-3 font-bold text-emerald-400 font-mono flex items-center gap-2">
                         ₹{c.wallet_balance.toFixed(2)}
+                        <button
+                          onClick={() => { setSelectedCustomer(c); setWalletModalOpen(true); }}
+                          className="bg-slate-700 hover:bg-slate-600 text-white rounded p-1"
+                          title="Adjust Wallet"
+                        >
+                          <Wallet className="w-3.5 h-3.5" />
+                        </button>
                       </td>
                       <td className="py-3">
                         <span
@@ -165,6 +202,43 @@ export default function CustomerDirectory() {
           </table>
         </div>
       </div>
+      
+      {/* Wallet Adjustment Modal */}
+      {walletModalOpen && selectedCustomer && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#1F2937] border border-slate-700 rounded-3xl p-6 max-w-sm w-full">
+            <h3 className="text-white font-bold mb-4">Adjust Wallet: {selectedCustomer.name || selectedCustomer.phone_number}</h3>
+            <form onSubmit={handleWalletAdjustSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs text-slate-400">Amount (+/-)</label>
+                <input
+                  type="number"
+                  required
+                  value={walletAmount}
+                  onChange={e => setWalletAmount(e.target.value)}
+                  placeholder="e.g. 50 or -50"
+                  className="w-full bg-[#111827] border border-slate-700 rounded-xl px-3 py-2 text-white mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400">Reason / Description</label>
+                <input
+                  type="text"
+                  required
+                  value={walletDesc}
+                  onChange={e => setWalletDesc(e.target.value)}
+                  placeholder="e.g. Refund for missing item"
+                  className="w-full bg-[#111827] border border-slate-700 rounded-xl px-3 py-2 text-white mt-1"
+                />
+              </div>
+              <div className="flex gap-2 justify-end mt-4">
+                <button type="button" onClick={() => setWalletModalOpen(false)} className="px-4 py-2 rounded-xl text-slate-400">Cancel</button>
+                <button type="submit" className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold">Update Wallet</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

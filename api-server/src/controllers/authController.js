@@ -61,13 +61,19 @@ async function customerAuth(req, res) {
 
       user = await db('users').where({ id: userId }).first();
     } else {
-      // User exists. If password provided and user has password, check it
-      if (password && user.password_hash) {
+      // User exists. If account has a password, it MUST be verified
+      if (user.password_hash) {
+        if (!password) {
+          return res.status(401).json({ success: false, message: 'Password is required to authenticate.' });
+        }
         const matches = await bcrypt.compare(password, user.password_hash);
         if (!matches) {
           return res.status(401).json({ success: false, message: 'Incorrect password.' });
         }
+      } else if (!password && !firebaseUid) {
+        return res.status(400).json({ success: false, message: 'Authentication credential required.' });
       }
+
       if (firebaseUid && !user.firebase_uid) {
         await db('users').where({ id: user.id }).update({ firebase_uid: firebaseUid });
       }
@@ -120,29 +126,34 @@ async function customerAuth(req, res) {
 async function firebaseCustomerAuth(req, res) {
   try {
     const { idToken, email, name, firebaseUid } = req.body;
-    if (!idToken && !firebaseUid) {
-      return res.status(400).json({ success: false, message: 'Google Authentication Token or UID is required.' });
-    }
 
-    let uid = firebaseUid;
-    let userEmail = email;
-    let userName = name;
+    let uid = null;
+    let userEmail = null;
+    let userName = name ? String(name).trim().substring(0, 50).replace(/[<>]/g, '') : null;
 
-    // Verify token with Firebase Admin
+    // Cryptographic Token Verification
     if (idToken) {
       try {
         const decoded = await verifyFirebaseToken(idToken);
         if (decoded) {
-          uid = decoded.uid || decoded.user_id || uid;
-          userEmail = decoded.email || userEmail;
+          uid = decoded.uid || decoded.user_id || decoded.sub;
+          userEmail = decoded.email ? String(decoded.email).toLowerCase().trim() : null;
           userName = decoded.name || userName;
         }
       } catch (tokenErr) {
-        console.warn('Firebase token verification note:', tokenErr.message);
-        if (!uid && !userEmail) {
-          return res.status(401).json({ success: false, message: 'Failed to verify Google token.' });
-        }
+        console.warn('Firebase token verification failed:', tokenErr.message);
+        return res.status(401).json({ success: false, message: 'Google Authentication token invalid or expired.' });
       }
+    } else if (process.env.NODE_ENV !== 'production' && firebaseUid && email && String(firebaseUid).startsWith('google_demo_')) {
+      // Isolated development-only fallback for 1-click test flow
+      uid = firebaseUid;
+      userEmail = String(email).toLowerCase().trim();
+    } else {
+      return res.status(400).json({ success: false, message: 'Google ID Token is mandatory.' });
+    }
+
+    if (!userEmail && !uid) {
+      return res.status(400).json({ success: false, message: 'Unable to resolve user identity from Google token.' });
     }
 
     // Find existing user by firebase_uid or email
@@ -228,9 +239,11 @@ async function completeProfile(req, res) {
     const { name, location_id, email, phone } = req.body;
     const userId = req.user.id;
 
-    if (!name || !name.trim()) {
+    if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Full Name is required.' });
     }
+    const cleanName = name.trim().substring(0, 50).replace(/[<>]/g, '');
+
     if (!location_id) {
       return res.status(400).json({ success: false, message: 'Please select your Campus delivery location.' });
     }
@@ -271,7 +284,7 @@ async function completeProfile(req, res) {
     }
 
     await db('users').where({ id: userId }).update({
-      name: name.trim(),
+      name: cleanName,
       phone_number: finalPhone,
       email: email ? email.trim() : currentUser.email,
       default_location_id: location_id,

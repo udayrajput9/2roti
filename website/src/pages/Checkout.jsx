@@ -5,10 +5,11 @@ import { useCart } from '../context/CartContext';
 
 export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], activeLocation }) {
   const { user, isAuthenticated, refreshUser } = useAuth();
-  const { cartItems, itemsTotal, deliveryFee, grandTotal, hasOutletItems, clearCart } = useCart();
+  const { cartItems, itemsTotal, deliveryFee, grandTotal, hasOutletItems, clearCart, sysSettings } = useCart();
 
   const [paymentMethod, setPaymentMethod] = useState('razorpay'); // 'wallet' | 'razorpay' | 'cod_outlet'
   const [addressNote, setAddressNote] = useState('');
+  const [hpTrap, setHpTrap] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -61,7 +62,8 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
         is_outlet_order: hasOutletItems,
         payment_source: paymentSource,
         razorpay_order_id: rzpOrderId,
-        razorpay_payment_id: rzpPaymentId
+        razorpay_payment_id: rzpPaymentId,
+        _hp_trap: hpTrap
       };
 
       const res = await fetch('/api/orders/create', {
@@ -173,8 +175,7 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
 
         <div className="space-y-2.5">
           
-          {/* 1. 2 Roti Loyalty Wallet */}
-          <div
+          {sysSettings?.payment_methods?.wallet !== false && (<div
             onClick={() => {
               if (isWalletEligible) setPaymentMethod('wallet');
             }}
@@ -219,8 +220,7 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
             </div>
           </div>
 
-          {/* 2. Razorpay Online */}
-          <div
+          )}{sysSettings?.payment_methods?.razorpay !== false && (<div
             onClick={() => setPaymentMethod('razorpay')}
             className={`p-3.5 rounded-2xl border transition-all flex items-start justify-between cursor-pointer ${
               paymentMethod === 'razorpay'
@@ -256,8 +256,8 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
             </div>
           </div>
 
-          {/* 3. Outlet Counter Pay */}
-          {hasOutletItems && (
+          )}{/* 3. Outlet Counter Pay */}
+          {hasOutletItems && sysSettings?.payment_methods?.cod_outlet !== false && (
             <div
               onClick={() => setPaymentMethod('cod_outlet')}
               className={`p-3.5 rounded-2xl border transition-all flex items-start justify-between cursor-pointer ${
@@ -340,7 +340,7 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
         </div>
       </div>
 
-      {/* 5. Place Order CTA */}
+      <input type="text" name="_hp_trap" value={hpTrap} onChange={(e) => setHpTrap(e.target.value)} tabIndex={-1} autoComplete="off" className="hidden" />{/* 5. Place Order CTA */}
       <button
         onClick={handlePlaceOrder}
         disabled={loading}
@@ -365,3 +365,10 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
     </div>
   );
 }
+
+
+
+
+
+
+

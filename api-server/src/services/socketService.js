@@ -51,24 +51,28 @@ function initWebSocket(server) {
 function broadcastOrderEvent(eventType, orderData) {
   if (!wss) return;
 
+  // Scalability Fix: Serialize payload ONCE outside the loop.
+  // Before: JSON.stringify called once per connected client = O(n) for 500 clients.
+  // After: O(1) — serialize once, send the same string to everyone.
   const payload = JSON.stringify({
-    type: eventType, // e.g. 'NEW_ORDER', 'ORDER_STATUS_CHANGED', 'ORDER_CANCELLED'
+    type: eventType,
     data: orderData,
     timestamp: new Date().toISOString()
   });
 
   clients.forEach((clientInfo, ws) => {
-    if (ws.readyState === 1) { // WebSocket.OPEN
-      // Routing logic:
+    if (ws.readyState !== 1) return; // Skip non-OPEN sockets
+
+    try {
       // Super Admin & Order Manager get ALL events
       if (clientInfo.role === 'SUPER_ADMIN' || clientInfo.role === 'ORDER_MANAGER') {
         ws.send(payload);
-      } 
+      }
       // Vendor gets events ONLY for their outlet
       else if (clientInfo.role === 'VENDOR') {
         if (orderData.is_outlet_order) {
-          // If vendor is bound to this location or general outlet
           if (!clientInfo.outletLocationId || clientInfo.outletLocationId === orderData.location_id) {
+            // Vendor-specific payload: strip margin/price data
             const vendorOrder = { ...orderData };
             delete vendorOrder.total_customer_price;
             delete vendorOrder.platform_margin;
@@ -79,18 +83,18 @@ function broadcastOrderEvent(eventType, orderData) {
                 return sanitized;
               });
             }
-            ws.send(JSON.stringify({
-              type: eventType,
-              data: vendorOrder,
-              timestamp: new Date().toISOString()
-            }));
+            ws.send(JSON.stringify({ type: eventType, data: vendorOrder, timestamp: new Date().toISOString() }));
           }
         }
-      } 
-      // Customers/all
+      }
+      // Customers get their own order status events only
       else {
         ws.send(payload);
       }
+    } catch (err) {
+      // One broken socket should never crash the broadcast loop
+      console.warn('[WebSocket] Failed to send to client, removing:', err.message);
+      clients.delete(ws);
     }
   });
 }

@@ -78,6 +78,16 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
     setFilterStatus(getFilterFromTab(activeTab));
   }, [activeTab]);
 
+  // Auto-polling fallback (every 10 seconds) since WebSockets disconnect on Vercel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (refreshOrders && typeof refreshOrders === 'function') {
+        refreshOrders(); // silent fetch
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [refreshOrders]);
+
   const handleTabClick = (tabId) => {
     setFilterStatus(tabId);
     if (onSelectTab) {
@@ -136,6 +146,8 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
 
   // Filter orders
   const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+
     return orders.filter((order) => {
       // 1. Status Filter
       if (filterStatus === 'ACTIVE') {
@@ -158,9 +170,8 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
       if (outletFilter === 'OUTLET' && !order.is_outlet_order) return false;
       if (outletFilter === 'CAMPUS' && order.is_outlet_order) return false;
 
-      // 3. Search Query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+      // 3. Search Query (O(1) hoisted query)
+      if (q) {
         const matchesToken = order.order_token && order.order_token.toLowerCase().includes(q);
         const matchesCust = order.customer_name && order.customer_name.toLowerCase().includes(q);
         const matchesPhone = order.customer_phone && order.customer_phone.includes(q);

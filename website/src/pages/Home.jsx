@@ -37,10 +37,10 @@ import {
 import { getDishImage } from '../utils/dishImages';
 import { useCart } from '../context/CartContext';
 
-export default function Home({ menu = {}, loading = false, onOpenCart, onChangeTab }) {
-  const [activeCategory, setActiveCategory] = useState('Curry');
+export default function Home({ menu = {}, loading = false, onOpenCart, onChangeTab, initialCategory = 'Curry' }) {
+  const [activeCategory, setActiveCategory] = useState(initialCategory || 'Curry');
   const [dietaryFilter, setDietaryFilter] = useState('ALL'); // 'ALL' | 'VEG' | 'NON_VEG' | 'UNDER_100'
-  const { cartItems, totalCount, itemsTotal, addToCart, updateQuantity } = useCart();
+  const { cartItems, totalCount, itemsTotal, addToCart, updateQuantity, getItemQty, sysSettings } = useCart();
 
   // Dynamic time-based greeting
   const mealContext = useMemo(() => {
@@ -153,11 +153,18 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
         IconComponent: RiceBowlIcon,
         count: riceItems.length,
         items: riceItems
-      });
+    });
+    }
+
+    if (sysSettings?.categories && Array.isArray(sysSettings.categories)) {
+      return sysSettings.categories
+        .filter(sc => sc.active)
+        .map(sc => list.find(l => l.id === sc.id))
+        .filter(Boolean);
     }
 
     return list;
-  }, [curryItems, thaliItems, biryaniItems, pizzaItems, breadItems, rollItems, riceItems]);
+  }, [curryItems, thaliItems, biryaniItems, pizzaItems, breadItems, rollItems, riceItems, sysSettings?.categories]);
 
   const currentCategoryObj = categories.find(c => c.id === activeCategory);
   const rawItems = currentCategoryObj?.items || [];
@@ -209,10 +216,21 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
           </div>
 
           <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight leading-tight text-white">
-            Piping Hot Food <br />
-            <span className="bg-gradient-to-r from-[#FF5722] via-[#FF7043] to-[#FFA726] bg-clip-text text-transparent">
-              Delivered To Your Hostel Gate!
-            </span>
+            {sysSettings?.hero_banner?.main_text ? (
+              <>
+                {sysSettings.hero_banner.main_text.split(' ').slice(0, -2).join(' ')} <br />
+                <span className="bg-gradient-to-r from-[#FF5722] via-[#FF7043] to-[#FFA726] bg-clip-text text-transparent">
+                  {sysSettings.hero_banner.main_text.split(' ').slice(-2).join(' ')}
+                </span>
+              </>
+            ) : (
+              <>
+                Piping Hot Food <br />
+                <span className="bg-gradient-to-r from-[#FF5722] via-[#FF7043] to-[#FFA726] bg-clip-text text-transparent">
+                  Delivered To Your Hostel Gate!
+                </span>
+              </>
+            )}
           </h1>
 
           <p className="text-xs text-neutral-300 mt-2 font-medium leading-relaxed max-w-md">
@@ -227,7 +245,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
             </div>
             <div className="flex items-center gap-1.5 font-bold text-neutral-200">
               <CashbackCoinIcon className="w-4 h-4 shrink-0" />
-              <span>₹3 Wallet Cashback</span>
+              <span>{sysSettings?.hero_banner?.cashback_text || '₹13 Wallet Cashback'}</span>
             </div>
             <div className="flex items-center gap-1.5 font-bold text-neutral-200">
               <Flame className="w-3.5 h-3.5 text-[#FF7043] shrink-0" />
@@ -260,8 +278,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
 
           <div className="flex items-center gap-3.5 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
             {topBestsellers.map((item) => {
-              const inCart = cartItems.find(i => i.id === item.id);
-              const qty = inCart?.quantity || 0;
+              const qty = getItemQty(item.id);
               const dishImg = getDishImage(item);
               const isVeg = item.is_veg === 1 || item.is_veg === true;
 
@@ -276,8 +293,9 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
                       src={dishImg}
                       alt={item.name}
                       loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => { e.target.src = '/images/food/veg_thali.jpg'; }}
+                      onError={(e) => { e.target.src = '/images/food/veg_thali.webp'; }}
                     />
                     <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-amber-500/40 text-[9px] font-black text-amber-300 uppercase flex items-center gap-1">
                       <Flame className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
@@ -507,8 +525,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {displayedItems.map((item) => {
-              const inCart = cartItems.find(i => i.id === item.id);
-              const qty = inCart?.quantity || 0;
+              const qty = getItemQty(item.id);
               const dishImage = getDishImage(item);
               const isVeg = item.is_veg === 1 || item.is_veg === true;
 
@@ -562,9 +579,10 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
                         src={dishImage}
                         alt={item.name}
                         loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
-                          e.target.src = '/images/food/veg_thali.jpg';
+                          e.target.src = '/images/food/veg_thali.webp';
                         }}
                       />
                     </div>
@@ -612,40 +630,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
           Why Students Choose 2 Roti
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="p-4 rounded-2xl bg-[#121212] border border-neutral-800/90 shadow-sm space-y-1.5">
-            <div className="w-8 h-8 rounded-xl bg-[#FF5722]/20 border border-[#FF5722]/40 text-[#FF5722] flex items-center justify-center">
-              <ExpressDeliveryIcon className="w-5 h-5 text-[#FF5722]" />
-            </div>
-            <h4 className="text-xs font-black text-white">15-20 Min Gate Delivery</h4>
-            <p className="text-[11px] text-neutral-400 leading-relaxed font-medium">
-              Runners stationed at MMMUT / Gorakhpur campus gates for immediate student handoff.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-[#121212] border border-neutral-800/90 shadow-sm space-y-1.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center">
-              <MasterChefIcon className="w-5 h-5 text-emerald-400" />
-            </div>
-            <h4 className="text-xs font-black text-white">100% Homestyle Quality</h4>
-            <p className="text-[11px] text-neutral-400 leading-relaxed font-medium">
-              Freshly cooked everyday in spotless kitchens with authentic whole spices and clay tandoor.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-[#121212] border border-neutral-800/90 shadow-sm space-y-1.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center">
-              <CashbackCoinIcon className="w-5 h-5 text-amber-400" />
-            </div>
-            <h4 className="text-xs font-black text-white">₹3 Guaranteed Cashback</h4>
-            <p className="text-[11px] text-neutral-400 leading-relaxed font-medium">
-              Every completed order credits ₹3 into your 2 Roti Wallet for instant future savings.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 9. Sticky Floating Quick Cart Bar (When Items in Basket) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">{sysSettings?.trust_badges && Array.isArray(sysSettings.trust_badges) ? sysSettings.trust_badges.map((badge, index) => { const colors = ["bg-[#FF5722]/20 border-[#FF5722]/40 text-[#FF5722]", "bg-emerald-500/20 border-emerald-500/40 text-emerald-400", "bg-amber-500/20 border-amber-500/40 text-amber-400"]; const icons = [ExpressDeliveryIcon, MasterChefIcon, CashbackCoinIcon]; const cIndex = index % 3; const ColorClasses = colors[cIndex]; const IconComponent = icons[cIndex]; return (<div key={index} className="p-4 rounded-2xl bg-[#121212] border border-neutral-800/90 shadow-sm space-y-1.5"><div className={`w-8 h-8 rounded-xl border flex items-center justify-center ${ColorClasses}`}><IconComponent className="w-5 h-5" /></div><h4 className="text-xs font-black text-white">{badge.title}</h4><p className="text-[11px] text-neutral-400 leading-relaxed font-medium">{badge.desc}</p></div>); }) : null}</div></div>{/* 9. Sticky Floating Quick Cart Bar (When Items in Basket) */}
       {totalCount > 0 && onOpenCart && (
         <div className="fixed bottom-16 md:bottom-6 inset-x-0 z-40 px-4 flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div
@@ -677,3 +662,4 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
     </div>
   );
 }
+

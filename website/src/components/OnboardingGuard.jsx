@@ -8,6 +8,7 @@ export default function OnboardingGuard({ locations = [], isOpen, onClose }) {
   const [phone, setPhone] = useState('');
   const [locationId, setLocationId] = useState('');
   const [deliveryNote, setDeliveryNote] = useState('');
+  const [hpTrap, setHpTrap] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -55,7 +56,8 @@ export default function OnboardingGuard({ locations = [], isOpen, onClose }) {
         phone: cleanPhone,
         location_id: parseInt(locationId),
         delivery_address_note: deliveryNote.trim() || null,
-        email: user?.email || null
+        email: user?.email || null,
+        _hp_trap: hpTrap
       });
 
       if (onClose) onClose();
@@ -200,6 +202,8 @@ export default function OnboardingGuard({ locations = [], isOpen, onClose }) {
           <input
             type="text"
             name="_hp_trap"
+            value={hpTrap}
+            onChange={(e) => setHpTrap(e.target.value)}
             tabIndex={-1}
             autoComplete="off"
             className="hidden"

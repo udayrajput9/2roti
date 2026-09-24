@@ -2,12 +2,253 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    
+    <!-- Primary SEO Metadata -->
+    <title>2 Roti – Fresh Food Delivery &amp; Campus Cloud Kitchen | Order Online</title>
+    <meta name="description" content="Order authentic homestyle Indian meals, royal Thalis, Dum Biryani &amp; hot Tandoori Rotis from 2 Roti. Fast campus delivery to Jhungiya, Buddha, KIPM &amp; ITM hostels." />
+    <meta name="keywords" content="2 roti, 2roti, food delivery, campus food delivery, order food online, indian thali delivery, chicken thali, veg thali, dum biryani, jhungiya food, gorakhpur campus delivery, hostel night food, cloud kitchen, tandoori roti" />
+    <meta name="author" content="2 Roti Technologies" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://2roti.com/" />
+
+    <!-- Open Graph (Facebook / WhatsApp / LinkedIn) -->
+    <meta property="og:type" content="restaurant.restaurant" />
+    <meta property="og:site_name" content="2 Roti" />
+    <meta property="og:title" content="2 Roti – Fresh Food Delivery &amp; Campus Cloud Kitchen" />
+    <meta property="og:description" content="Craving royal Thalis, fragrant Dum Biryani or buttery Tandoori Rotis? Order from 2 Roti for lightning-fast delivery to hostel gates and campus locations." />
+    <meta property="og:url" content="https://2roti.com/" />
+    <meta property="og:image" content="https://2roti.com/images/food/veg_thali.webp" />
+    <meta property="og:image:secure_url" content="https://2roti.com/images/food/veg_thali.webp" />
+    <meta property="og:image:type" content="image/webp" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="800" />
+    <meta property="og:image:alt" content="2 Roti Royal Indian Thali Food Delivery" />
+    <meta property="og:locale" content="en_IN" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@2RotiCampus" />
+    <meta name="twitter:creator" content="@2RotiCampus" />
+    <meta name="twitter:title" content="2 Roti – Campus Food Delivery &amp; Online Menu" />
+    <meta name="twitter:description" content="Fresh, delicious food delivered straight to your campus hostel. Thalis, Biryani, Curries &amp; Rolls." />
+    <meta name="twitter:image" content="https://2roti.com/images/food/veg_thali.webp" />
+    <meta name="twitter:image:alt" content="2 Roti Food Delivery Menu" />
+
+    <!-- Local & Geo-Targeting SEO -->
+    <meta name="geo.region" content="IN-UP" />
+    <meta name="geo.placename" content="Gorakhpur, Uttar Pradesh, India" />
+    <meta name="geo.position" content="26.7606;83.3732" />
+    <meta name="ICBM" content="26.7606, 83.3732" />
+
+    <!-- Mobile & PWA Theme Branding -->
     <meta name="theme-color" content="#FF5722" />
-    <title>2 Roti – Fresh Food Delivered to Campus</title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="2 Roti" />
+    <link rel="icon" type="image/webp" href="/logos/app_icon_light.webp" />
+    <link rel="apple-touch-icon" href="/logos/app_icon_light.webp" />
+
+    <!-- 1. Google Sitelinks Searchbox Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "2 Roti",
+      "alternateName": "2 Roti Food Delivery",
+      "url": "https://2roti.com/",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://2roti.com/?tab=search&q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+
+    <!-- 2. Google Restaurant & Cloud Kitchen Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FastFoodRestaurant",
+      "@id": "https://2roti.com/#restaurant",
+      "name": "2 Roti",
+      "legalName": "2 Roti Food Ordering Ecosystem",
+      "alternateName": "2 Roti Campus Cloud Kitchen",
+      "description": "Authentic North Indian food delivery and campus cloud kitchen serving fresh Thalis, aromatic Dum Biryani, homestyle Curries, Tandoori Rotis, and Rolls to college hostels and campuses.",
+      "url": "https://2roti.com/",
+      "logo": "https://2roti.com/logos/app_icon_light.webp",
+      "image": "https://2roti.com/images/food/veg_thali.webp",
+      "telephone": "+91-9876543210",
+      "priceRange": "₹40 - ₹170",
+      "servesCuisine": ["North Indian", "Mughlai", "Street Food", "Desi Curries", "Fast Food"],
+      "acceptsReservations": false,
+      "currenciesAccepted": "INR",
+      "paymentAccepted": "Cash, UPI, Razorpay, Loyalty Wallet",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Jhungiya Chauraha, Near Engineering Campus",
+        "addressLocality": "Gorakhpur",
+        "addressRegion": "Uttar Pradesh",
+        "postalCode": "273013",
+        "addressCountry": "IN"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 26.7606,
+        "longitude": 83.3732
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "opens": "09:00",
+          "closes": "23:00"
+        }
+      ],
+      "hasMenu": {
+        "@type": "Menu",
+        "name": "2 Roti Daily Food Menu",
+        "url": "https://2roti.com/?tab=home",
+        "hasMenuSection": [
+          {
+            "@type": "MenuSection",
+            "name": "Royal Thalis",
+            "description": "Deluxe Indian platters with roti, sabji, dal, rice, salad"
+          },
+          {
+            "@type": "MenuSection",
+            "name": "Desi Curries",
+            "description": "Chicken curry, Mutton curry, Paneer curry & Egg curry"
+          },
+          {
+            "@type": "MenuSection",
+            "name": "Dum Biryanis",
+            "description": "Fragrant Dum Biryani served with spiced raita"
+          },
+          {
+            "@type": "MenuSection",
+            "name": "Outlet Specials",
+            "description": "Jhungiya live counter snacks, hot parathas, rolls & Combos"
+          }
+        ]
+      }
+    }
+    </script>
+
+    <!-- 3. Google Sitelinks Navigation Element Schema (For Search Internal Links) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "itemListElement": [
+        {
+          "@type": "SiteNavigationElement",
+          "position": 1,
+          "name": "Order Online Menu",
+          "description": "Browse the complete 2 Roti fresh delivery menu",
+          "url": "https://2roti.com/?tab=home"
+        },
+        {
+          "@type": "SiteNavigationElement",
+          "position": 2,
+          "name": "Special Thalis",
+          "description": "Royal Veg, Chicken, Paneer & Mutton Thalis",
+          "url": "https://2roti.com/?category=thali"
+        },
+        {
+          "@type": "SiteNavigationElement",
+          "position": 3,
+          "name": "Dum Biryani",
+          "description": "Chicken, Egg & Veg Dum Biryani combos",
+          "url": "https://2roti.com/?category=biryani"
+        },
+        {
+          "@type": "SiteNavigationElement",
+          "position": 4,
+          "name": "Jhungiya Live Outlet",
+          "description": "Fresh tandoori rotis, chola bhatura, hot rolls",
+          "url": "https://2roti.com/?tab=outlet"
+        },
+        {
+          "@type": "SiteNavigationElement",
+          "position": 5,
+          "name": "Campus Delivery Locations",
+          "description": "Hostel delivery to Jhungiya, Buddha, KIPM & ITM campuses",
+          "url": "https://2roti.com/?location=all"
+        },
+        {
+          "@type": "SiteNavigationElement",
+          "position": 6,
+          "name": "Search Dishes",
+          "description": "Deep search food engine with dietary filters",
+          "url": "https://2roti.com/?tab=search"
+        }
+      ]
+    }
+    </script>
+
+    <!-- 4. Google Breadcrumbs Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://2roti.com/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Food Menu",
+          "item": "https://2roti.com/?tab=home"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Special Thalis",
+          "item": "https://2roti.com/?category=thali"
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "name": "Dum Biryani",
+          "item": "https://2roti.com/?category=biryani"
+        },
+        {
+          "@type": "ListItem",
+          "position": 5,
+          "name": "Jhungiya Live Outlet",
+          "item": "https://2roti.com/?tab=outlet"
+        }
+      ]
+    }
+    </script>
   </head>
   <body class="bg-[#0E0E0E] text-white selection:bg-[#FF5722] selection:text-white">
+    <!-- Non-JS Crawler-Friendly Semantic Sitelinks Navigation -->
+    <noscript>
+      <header style="padding: 20px; background: #121212; color: #fff;">
+        <h1>2 Roti – Campus Food Delivery &amp; Cloud Kitchen</h1>
+        <p>Order authentic North Indian Thalis, Dum Biryani, Curries, and Tandoori Rotis delivered fast to Jhungiya, Buddha, KIPM &amp; ITM hostels.</p>
+        <nav aria-label="Campus Food Navigation">
+          <ul>
+            <li><a href="/?tab=home" style="color: #FF5722;">Order Online Menu</a></li>
+            <li><a href="/?category=thali" style="color: #FF5722;">Royal Veg &amp; Chicken Thalis</a></li>
+            <li><a href="/?category=curry" style="color: #FF5722;">Desi Gravy Curries</a></li>
+            <li><a href="/?category=biryani" style="color: #FF5722;">Aromatic Dum Biryani</a></li>
+            <li><a href="/?tab=outlet" style="color: #FF5722;">Jhungiya Live Counter Outlet</a></li>
+            <li><a href="/?tab=search" style="color: #FF5722;">Search Dishes &amp; Combos</a></li>
+          </ul>
+        </nav>
+      </header>
+    </noscript>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -61,12 +61,17 @@ export default function Header({
           >
             <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(255,87,34,0.35)] border border-[#FF5722]/40 group-hover:scale-105 transition-transform duration-300">
               <img
-                src="/logos/app_icon_light.jpg"
+                src="/logos/app_icon_light.webp"
                 alt="2 Roti Logo"
+                decoding="async"
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
+                  if (e.target.src.endsWith('.webp')) {
+                    e.target.src = '/logos/app_icon_light.jpg';
+                  } else {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }
                 }}
               />
               <div className="hidden w-full h-full bg-gradient-to-br from-[#FF5722] to-[#BF360C] items-center justify-center font-black text-white text-sm">

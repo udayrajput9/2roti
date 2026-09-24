@@ -54,9 +54,9 @@ const TRENDING_QUERIES = [
 
 const LOCAL_STORAGE_KEY = '2roti_recent_searches_v2';
 
-export default function SearchPage({ allItems = [] }) {
-  const [query, setQuery]                 = useState('');
-  const [activeCategory, setActiveCategory] = useState('ALL');
+export default function SearchPage({ allItems = [], initialQuery = '', initialCategory = 'ALL' }) {
+  const [query, setQuery]                 = useState(initialQuery);
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [dietaryFilter, setDietaryFilter] = useState('ALL'); // 'ALL' | 'VEG' | 'NON_VEG'
   const [under100Only, setUnder100]       = useState(false);
   const [sortBy, setSortBy]               = useState('RELEVANCE'); // 'RELEVANCE' | 'PRICE_LOW' | 'PRICE_HIGH' | 'RATING' | 'FASTEST'
@@ -65,7 +65,7 @@ export default function SearchPage({ allItems = [] }) {
   const [showFiltersModal, setShowFiltersModal] = useState(false);
 
   const searchRef = useRef(null);
-  const { cartItems, addToCart, updateQuantity } = useCart();
+  const { cartItems, addToCart, updateQuantity, getItemQty, sysSettings } = useCart();
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -269,8 +269,8 @@ export default function SearchPage({ allItems = [] }) {
                   <span>Trending on Campus</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {TRENDING_QUERIES.map((t, idx) => {
-                    const Icon = t.Icon;
+                  {(sysSettings?.trending_searches?.length > 0 ? sysSettings.trending_searches : TRENDING_QUERIES).map((t, idx) => {
+                    const Icon = t.Icon || TrendingUp;
                     return (
                       <button
                         key={idx}
@@ -523,6 +523,7 @@ export default function SearchPage({ allItems = [] }) {
                     item={item}
                     relevance={{ confidence: 85, matchedReasons: ['Nearest Alternative'] }}
                     cartItems={cartItems}
+                    getItemQty={getItemQty}
                     addToCart={addToCart}
                     updateQuantity={updateQuantity}
                     query={query}
@@ -544,6 +545,7 @@ export default function SearchPage({ allItems = [] }) {
               item={item}
               relevance={{ confidence, matchedReasons }}
               cartItems={cartItems}
+              getItemQty={getItemQty}
               addToCart={addToCart}
               updateQuantity={updateQuantity}
               query={query}
@@ -562,13 +564,14 @@ function FoodItemCard({
   item,
   relevance,
   cartItems,
+  getItemQty,
   addToCart,
   updateQuantity,
   query,
   renderHighlightedName
 }) {
-  const cartItem = cartItems.find(i => i.id === item.id);
-  const qty = cartItem?.quantity ?? 0;
+  // Data Structure Optimization: O(1) Map lookup vs O(C) array search
+  const qty = getItemQty ? getItemQty(item.id) : (cartItems?.find(i => i.id === item.id)?.quantity ?? 0);
   const isVeg = item.is_veg === 1 || item.is_veg === true;
   const dishImg = getDishImage(item);
 
@@ -582,9 +585,10 @@ function FoodItemCard({
           alt={item.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
+          decoding="async"
           onError={(e) => {
             // Fallback gracefully to default placeholder
-            e.target.src = '/images/food/veg_thali.jpg';
+            e.target.src = '/images/food/veg_thali.webp';
           }}
         />
         <div className="absolute top-1.5 left-1.5">
@@ -684,3 +688,6 @@ function FoodItemCard({
     </div>
   );
 }
+
+
+

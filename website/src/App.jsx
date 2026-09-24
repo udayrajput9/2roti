@@ -18,8 +18,33 @@ import { CartProvider } from './context/CartContext';
 function WebsiteContent() {
   const { user, isAuthenticated, isProfileComplete } = useAuth();
   
+  // Parse incoming URL search parameters (Google Sitelinks, Searchbox, Category links)
+  const initialParams = React.useMemo(() => {
+    if (typeof window !== 'undefined' && window.location.search) {
+      return new URLSearchParams(window.location.search);
+    }
+    return new URLSearchParams();
+  }, []);
+
   const [showSplash, setShowSplash] = useState(true);
-  const [activeTab, setActiveTab] = useState('home'); // home | search | outlet | profile | checkout
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = initialParams.get('tab');
+    if (tab && ['home', 'search', 'outlet', 'profile', 'checkout'].includes(tab.toLowerCase())) {
+      return tab.toLowerCase();
+    }
+    if (initialParams.get('q')) return 'search';
+    return 'home';
+  });
+
+  const [initialSearchQuery] = useState(() => initialParams.get('q') || '');
+  const [initialCategory] = useState(() => {
+    const cat = initialParams.get('category');
+    if (cat) {
+      return cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
+    }
+    return 'Curry';
+  });
+
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
@@ -28,6 +53,24 @@ function WebsiteContent() {
   const [menu, setMenu] = useState({});
   const [outletItems, setOutletItems] = useState([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
+
+  // Sync tab changes with URL
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    try {
+      if (typeof window !== 'undefined' && window.history) {
+        const url = new URL(window.location.href);
+        if (newTab === 'home') {
+          url.searchParams.delete('tab');
+        } else {
+          url.searchParams.set('tab', newTab);
+        }
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
 
   // Fetch locations & menu
   useEffect(() => {
@@ -41,7 +84,16 @@ function WebsiteContent() {
           const locData = await locRes.json();
           if (locData.success && locData.locations) {
             setLocations(locData.locations);
-            setActiveLocation(locData.locations[0]);
+            const locParam = initialParams.get('location');
+            if (locParam) {
+              const matchedLoc = locData.locations.find(l => 
+                l.name?.toLowerCase().includes(locParam.toLowerCase()) || 
+                l.code?.toLowerCase() === locParam.toLowerCase()
+              );
+              setActiveLocation(matchedLoc || locData.locations[0]);
+            } else {
+              setActiveLocation(locData.locations[0]);
+            }
           }
         }
 
@@ -69,7 +121,7 @@ function WebsiteContent() {
       }
     }
     initData();
-  }, []);
+  }, [initialParams]);
 
   // Update activeLocation when user logs in with saved default location
   useEffect(() => {
@@ -106,7 +158,7 @@ function WebsiteContent() {
         locations={locations}
         activeLocation={activeLocation}
         activeTab={activeTab}
-        onChangeTab={(tabId) => setActiveTab(tabId)}
+        onChangeTab={(tabId) => handleTabChange(tabId)}
       />
 
       {/* 3. Main Views */}
@@ -116,18 +168,23 @@ function WebsiteContent() {
             menu={menu}
             loading={loadingMenu}
             onOpenCart={() => setIsCartOpen(true)}
-            onChangeTab={(t) => setActiveTab(t)}
+            onChangeTab={(t) => handleTabChange(t)}
+            initialCategory={initialCategory}
           />
         )}
 
         {activeTab === 'search' && (
-          <SearchPage allItems={allSearchItems} />
+          <SearchPage
+            allItems={allSearchItems}
+            initialQuery={initialSearchQuery}
+            initialCategory={initialCategory}
+          />
         )}
 
         {activeTab === 'outlet' && (
           <OutletPage
             outletItems={outletItems}
-            onGoHome={() => setActiveTab('home')}
+            onGoHome={() => handleTabChange('home')}
           />
         )}
 
@@ -137,7 +194,7 @@ function WebsiteContent() {
             activeLocation={activeLocation}
             onSelectLocation={(loc) => setActiveLocation(loc)}
             onOpenAuth={() => setIsAuthOpen(true)}
-            onNavigateToTab={(t) => setActiveTab(t)}
+            onNavigateToTab={(t) => handleTabChange(t)}
             onOpenCart={() => setIsCartOpen(true)}
           />
         )}
@@ -146,9 +203,9 @@ function WebsiteContent() {
           <CheckoutPage
             locations={locations}
             activeLocation={activeLocation}
-            onBack={() => setActiveTab('home')}
+            onBack={() => handleTabChange('home')}
             onOrderSuccess={(createdOrder) => {
-              setActiveTab('profile');
+              handleTabChange('profile');
             }}
           />
         )}
@@ -157,7 +214,7 @@ function WebsiteContent() {
       {/* 4. Sticky Bottom Navigation for Mobile */}
       <BottomNav
         activeTab={activeTab === 'checkout' ? 'home' : activeTab}
-        onChangeTab={(tabId) => setActiveTab(tabId)}
+        onChangeTab={(tabId) => handleTabChange(tabId)}
       />
 
       {/* 5. Slide-out Cart Drawer */}
@@ -175,7 +232,7 @@ function WebsiteContent() {
             setPendingCheckout(true);
             return;
           }
-          setActiveTab('checkout');
+          handleTabChange('checkout');
         }}
       />
 

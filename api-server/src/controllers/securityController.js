@@ -1,17 +1,20 @@
 const db = require('../config/database');
+const { setCachedIpBlock } = require('../middleware/antiBotMiddleware');
 
 // 1. Get Security Overview & Logs
 async function getSecurityOverview(req, res) {
   try {
-    const logs = await db('security_audit_logs').orderBy('created_at', 'desc').limit(50);
-    const blockedIps = await db('security_audit_logs')
-      .where({ is_blocked: true })
-      .distinct('ip_address', 'action', 'created_at');
-
-    const honeypotHits = await db('security_audit_logs')
-      .where({ action: 'HONEYPOT_TRIPPED' })
-      .count('id as cnt')
-      .first();
+    // Concurrency Optimization: Run independent queries in parallel via Promise.all
+    const [logs, blockedIps, honeypotHits] = await Promise.all([
+      db('security_audit_logs').orderBy('created_at', 'desc').limit(50),
+      db('security_audit_logs')
+        .where({ is_blocked: true })
+        .distinct('ip_address', 'action', 'created_at'),
+      db('security_audit_logs')
+        .where({ action: 'HONEYPOT_TRIPPED' })
+        .count('id as cnt')
+        .first()
+    ]);
 
     return res.json({
       success: true,
@@ -35,8 +38,12 @@ async function blockIp(req, res) {
       return res.status(400).json({ success: false, message: 'IP address required.' });
     }
 
+    const cleanIp = ip.trim();
+    // Update real-time in-memory cache instantly (O(1))
+    setCachedIpBlock(cleanIp, true);
+
     await db('security_audit_logs').insert({
-      ip_address: ip.trim(),
+      ip_address: cleanIp,
       endpoint: '/admin/manual-block',
       action: 'MANUAL_ADMIN_BLOCK',
       threat_score: 100,
@@ -44,7 +51,7 @@ async function blockIp(req, res) {
       details: JSON.stringify({ reason: reason || 'Manual block by Super Admin' })
     });
 
-    return res.json({ success: true, message: `IP ${ip} blocked successfully.` });
+    return res.json({ success: true, message: `IP ${cleanIp} blocked successfully.` });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to block IP.' });
   }
@@ -58,9 +65,13 @@ async function unblockIp(req, res) {
       return res.status(400).json({ success: false, message: 'IP address required.' });
     }
 
-    await db('security_audit_logs').where({ ip_address: ip.trim() }).update({ is_blocked: false });
+    const cleanIp = ip.trim();
+    // Invalidate in-memory cache instantly (O(1))
+    setCachedIpBlock(cleanIp, false);
 
-    return res.json({ success: true, message: `IP ${ip} unblocked.` });
+    await db('security_audit_logs').where({ ip_address: cleanIp }).update({ is_blocked: false });
+
+    return res.json({ success: true, message: `IP ${cleanIp} unblocked.` });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to unblock IP.' });
   }

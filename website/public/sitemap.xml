@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <!-- Homepage & Core Food Ordering Portal -->
+  <url>
+    <loc>https://2roti.com/</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://2roti.com/images/food/veg_thali.webp</image:loc>
+      <image:title>2 Roti Royal Veg Thali</image:title>
+      <image:caption>Authentic North Indian Thali with Dal, Sabji, Roti, Rice &amp; Salad</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://2roti.com/images/food/chicken_thali.webp</image:loc>
+      <image:title>2 Roti Deluxe Chicken Thali</image:title>
+      <image:caption>Delicious Chicken Curry Thali with Hot Rotis</image:caption>
+    </image:image>
+  </url>
+
+  <!-- Online Food Menu & Categories -->
+  <url>
+    <loc>https://2roti.com/?tab=home</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Deep Dish Search Engine -->
+  <url>
+    <loc>https://2roti.com/?tab=search</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Jhungiya Live Outlet -->
+  <url>
+    <loc>https://2roti.com/?tab=outlet</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://2roti.com/images/food/chicken_biryani_outlet.webp</image:loc>
+      <image:title>2 Roti Jhungiya Outlet Dum Biryani</image:title>
+    </image:image>
+  </url>
+
+  <!-- Category Sitelinks: Thalis -->
+  <url>
+    <loc>https://2roti.com/?category=thali</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Category Sitelinks: Curries -->
+  <url>
+    <loc>https://2roti.com/?category=curry</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Category Sitelinks: Biryanis -->
+  <url>
+    <loc>https://2roti.com/?category=biryani</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Category Sitelinks: Pizzas -->
+  <url>
+    <loc>https://2roti.com/?category=pizza</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Campus Location: Jhungiya -->
+  <url>
+    <loc>https://2roti.com/?location=jhungiya</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Campus Location: Buddha PG College -->
+  <url>
+    <loc>https://2roti.com/?location=buddha</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Campus Location: KIPM College of Engineering -->
+  <url>
+    <loc>https://2roti.com/?location=kipm</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Campus Location: ITM Institute of Technology -->
+  <url>
+    <loc>https://2roti.com/?location=itm</loc>
+    <lastmod>2026-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>

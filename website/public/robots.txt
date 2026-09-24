@@ -1,0 +1,16 @@
+# 2 Roti – Robots Exclusion Protocol
+# https://2roti.com/robots.txt
+
+User-agent: *
+Allow: /
+Allow: /images/
+Allow: /logos/
+
+# Disallow private user states and internal endpoints
+Disallow: /api/
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /profile
+
+# Search Engine Sitemaps
+Sitemap: https://2roti.com/sitemap.xml

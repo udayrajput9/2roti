@@ -11,11 +11,19 @@ if (process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE
     client: 'pg',
     connection: {
       connectionString,
-      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false }
+      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
+      // Scalability: Connection-level timeout to prevent hanging under load
+      connectionTimeoutMillis: 5000,  // fail in 5s if DB unreachable
+      statement_timeout: 30000         // kill queries running > 30s
     },
     pool: {
-      min: 2,
-      max: 10
+      min: 0,
+      // Vercel serverless: max 1 (each function instance is isolated)
+      // Local/dedicated server: max 10 handles ~500 concurrent users with queue
+      max: process.env.VERCEL ? 1 : 10,
+      idleTimeoutMillis: 10000,
+      // Fail fast if pool exhausted under load — prevents request pile-up
+      acquireTimeoutMillis: 8000
     }
   });
 } else {
