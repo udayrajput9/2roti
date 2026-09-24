@@ -3,17 +3,17 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <!-- Homepage & Core Food Ordering Portal -->
   <url>
-    <loc>https://2roti.com/</loc>
+    <loc>https://www.doroti.shop/</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://2roti.com/images/food/veg_thali.webp</image:loc>
+      <image:loc>https://www.doroti.shop/images/food/veg_thali.webp</image:loc>
       <image:title>2 Roti Royal Veg Thali</image:title>
       <image:caption>Authentic North Indian Thali with Dal, Sabji, Roti, Rice &amp; Salad</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://2roti.com/images/food/chicken_thali.webp</image:loc>
+      <image:loc>https://www.doroti.shop/images/food/chicken_thali.webp</image:loc>
       <image:title>2 Roti Deluxe Chicken Thali</image:title>
       <image:caption>Delicious Chicken Curry Thali with Hot Rotis</image:caption>
     </image:image>
@@ -21,7 +21,7 @@
 
   <!-- Online Food Menu & Categories -->
   <url>
-    <loc>https://2roti.com/?tab=home</loc>
+    <loc>https://www.doroti.shop/?tab=home</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -29,7 +29,7 @@
 
   <!-- Deep Dish Search Engine -->
   <url>
-    <loc>https://2roti.com/?tab=search</loc>
+    <loc>https://www.doroti.shop/?tab=search</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -37,19 +37,19 @@
 
   <!-- Jhungiya Live Outlet -->
   <url>
-    <loc>https://2roti.com/?tab=outlet</loc>
+    <loc>https://www.doroti.shop/?tab=outlet</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
-      <image:loc>https://2roti.com/images/food/chicken_biryani_outlet.webp</image:loc>
+      <image:loc>https://www.doroti.shop/images/food/chicken_biryani_outlet.webp</image:loc>
       <image:title>2 Roti Jhungiya Outlet Dum Biryani</image:title>
     </image:image>
   </url>
 
   <!-- Category Sitelinks: Thalis -->
   <url>
-    <loc>https://2roti.com/?category=thali</loc>
+    <loc>https://www.doroti.shop/?category=thali</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -57,7 +57,7 @@
 
   <!-- Category Sitelinks: Curries -->
   <url>
-    <loc>https://2roti.com/?category=curry</loc>
+    <loc>https://www.doroti.shop/?category=curry</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -65,7 +65,7 @@
 
   <!-- Category Sitelinks: Biryanis -->
   <url>
-    <loc>https://2roti.com/?category=biryani</loc>
+    <loc>https://www.doroti.shop/?category=biryani</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -73,7 +73,7 @@
 
   <!-- Category Sitelinks: Pizzas -->
   <url>
-    <loc>https://2roti.com/?category=pizza</loc>
+    <loc>https://www.doroti.shop/?category=pizza</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
@@ -81,7 +81,7 @@
 
   <!-- Campus Location: Jhungiya -->
   <url>
-    <loc>https://2roti.com/?location=jhungiya</loc>
+    <loc>https://www.doroti.shop/?location=jhungiya</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -89,7 +89,7 @@
 
   <!-- Campus Location: Buddha PG College -->
   <url>
-    <loc>https://2roti.com/?location=buddha</loc>
+    <loc>https://www.doroti.shop/?location=buddha</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -97,7 +97,7 @@
 
   <!-- Campus Location: KIPM College of Engineering -->
   <url>
-    <loc>https://2roti.com/?location=kipm</loc>
+    <loc>https://www.doroti.shop/?location=kipm</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -105,7 +105,7 @@
 
   <!-- Campus Location: ITM Institute of Technology -->
   <url>
-    <loc>https://2roti.com/?location=itm</loc>
+    <loc>https://www.doroti.shop/?location=itm</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -113,37 +113,37 @@
 
   <!-- Legal & Payment Compliance URLs (Razorpay & Cashfree) -->
   <url>
-    <loc>https://2roti.com/?tab=terms</loc>
+    <loc>https://www.doroti.shop/?tab=terms</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://2roti.com/?tab=privacy</loc>
+    <loc>https://www.doroti.shop/?tab=privacy</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://2roti.com/?tab=refund</loc>
+    <loc>https://www.doroti.shop/?tab=refund</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://2roti.com/?tab=shipping</loc>
+    <loc>https://www.doroti.shop/?tab=shipping</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://2roti.com/?tab=contact</loc>
+    <loc>https://www.doroti.shop/?tab=contact</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://2roti.com/?tab=about</loc>
+    <loc>https://www.doroti.shop/?tab=about</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
