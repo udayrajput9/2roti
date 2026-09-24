@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "npm --prefix website run build",
+  "installCommand": "npm install && npm install --prefix website",
+  "buildCommand": "npm run build",
   "outputDirectory": "website/dist",
   "rewrites": [
     {
