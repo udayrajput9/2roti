@@ -212,7 +212,7 @@ async function initSchema() {
     });
   }
 
-  console.log('✅ SQLite Schema initialized successfully.');
+  console.log('✅ Database Schema initialized successfully.');
 }
 
 module.exports = { initSchema };

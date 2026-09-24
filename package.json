@@ -4,10 +4,39 @@
   "private": true,
   "description": "2 Roti Food Ordering & Modern ERP Operations Ecosystem",
   "scripts": {
+    "build": "npm --prefix website run build",
+    "build:all": "npm --prefix website run build && npm --prefix admin-web run build",
+    "build:website": "npm --prefix website run build",
+    "build:admin": "npm --prefix admin-web run build",
     "start:server": "cd api-server && npm start",
     "start:website": "cd website && npm run dev",
     "start:admin": "cd admin-web && npm run dev",
-    "seed": "cd api-server && npm run seed"
+    "seed": "cd api-server && npm run seed",
+    "seed:supabase": "node api-server/src/models/seed.js"
   },
-  "keywords": ["food-delivery", "erp", "react", "nodejs", "razorpay", "websockets"]
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.13.0",
+    "sqlite3": "^5.1.7",
+    "ws": "^8.17.1",
+    "zod": "^3.23.8"
+  },
+  "keywords": [
+    "food-delivery",
+    "erp",
+    "react",
+    "nodejs",
+    "razorpay",
+    "websockets",
+    "supabase"
+  ]
 }

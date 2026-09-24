@@ -99,6 +99,8 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+if (require.main === module || !process.env.VERCEL) {
+  bootstrap();
+}
 
 module.exports = { app, server };

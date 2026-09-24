@@ -113,3 +113,34 @@ Exact high-fidelity port of `assets/splash_screen.html` with glowing squircle, b
 - Hidden honeypot form fields (`_hp_trap`) trap automated crawlers and immediately block malicious IPs with threat scoring.
 - Webhook idempotency prevents duplicate credits on retried Razorpay webhooks.
 - Test webhook simulator is strictly gated and requires typing `"CONFIRM"` in capital letters.
+
+---
+
+## ⚡ Vercel Deployment & Supabase Pipeline
+
+### 1. Supabase PostgreSQL Setup
+1. In your Supabase project dashboard, navigate to **Project Settings** ➔ **Database**.
+2. Copy the **Connection URI** (Node.js/Pooler URI), e.g.:
+   ```
+   postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+   ```
+3. Run the schema initialization and seeding script:
+   ```bash
+   DATABASE_URL="your-supabase-db-url" node scripts/setup-supabase.js
+   ```
+
+### 2. Vercel Configuration & Environment Variables
+When importing `udayrajput9/2roti` in Vercel, configure the following **Environment Variables**:
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | Supabase Postgres URI |
+| `JWT_SECRET` | Super secure JWT secret string |
+| `REFRESH_TOKEN_SECRET` | Refresh token JWT secret |
+| `RAZORPAY_KEY_ID` | Razorpay Key ID |
+| `RAZORPAY_KEY_SECRET` | Razorpay Key Secret |
+| `RAZORPAY_WEBHOOK_SECRET` | Razorpay Webhook Secret |
+
+### 3. GitHub Actions CI/CD Pipeline
+- Every push to `main` branch automatically triggers `.github/workflows/deploy.yml`.
+- The pipeline builds `website`, `admin-web`, checks schema integrity, and signals Vercel for production deployment.
