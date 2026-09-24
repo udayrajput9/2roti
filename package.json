@@ -1,0 +1,13 @@
+{
+  "name": "2roti-ecosystem",
+  "version": "1.0.0",
+  "private": true,
+  "description": "2 Roti Food Ordering & Modern ERP Operations Ecosystem",
+  "scripts": {
+    "start:server": "cd api-server && npm start",
+    "start:website": "cd website && npm run dev",
+    "start:admin": "cd admin-web && npm run dev",
+    "seed": "cd api-server && npm run seed"
+  },
+  "keywords": ["food-delivery", "erp", "react", "nodejs", "razorpay", "websockets"]
+}
