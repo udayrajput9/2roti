@@ -15,7 +15,8 @@
     "seed:supabase": "node api-server/src/models/seed.js",
     "optimize:images": "node scripts/optimize_all_images.js",
     "test:apis": "node scripts/test_all_apis.js",
-    "evaluate:seo": "node scripts/evaluate_seo.js"
+    "evaluate:seo": "node scripts/evaluate_seo.js",
+    "evaluate:compliance": "node scripts/evaluate_payment_compliance.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

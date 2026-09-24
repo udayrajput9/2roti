@@ -11,6 +11,10 @@ import SearchPage from './pages/Search';
 import OutletPage from './pages/Outlet';
 import ProfilePage from './pages/Profile';
 import CheckoutPage from './pages/Checkout';
+import LegalPolicyPage from './pages/LegalPolicyPage';
+
+import Footer from './components/Footer';
+import PolicyModal from './components/PolicyModal';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -26,15 +30,39 @@ function WebsiteContent() {
     return new URLSearchParams();
   }, []);
 
+  const LEGAL_TABS = ['terms', 'privacy', 'refund', 'shipping', 'contact', 'about', 'policy'];
+
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState(() => {
     const tab = initialParams.get('tab');
-    if (tab && ['home', 'search', 'outlet', 'profile', 'checkout'].includes(tab.toLowerCase())) {
-      return tab.toLowerCase();
+    if (tab) {
+      const lower = tab.toLowerCase();
+      if (['home', 'search', 'outlet', 'profile', 'checkout'].includes(lower)) {
+        return lower;
+      }
+      if (LEGAL_TABS.includes(lower)) {
+        return 'legal';
+      }
     }
     if (initialParams.get('q')) return 'search';
     return 'home';
   });
+
+  const [activeLegalSection, setActiveLegalSection] = useState(() => {
+    const tab = initialParams.get('tab');
+    if (tab && LEGAL_TABS.includes(tab.toLowerCase())) {
+      return tab.toLowerCase() === 'policy' ? 'terms' : tab.toLowerCase();
+    }
+    return 'terms';
+  });
+
+  const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
+  const [modalPolicyTab, setModalPolicyTab] = useState('terms');
+
+  const handleOpenPolicyModal = (policyKey) => {
+    setModalPolicyTab(policyKey);
+    setIsPolicyModalOpen(true);
+  };
 
   const [initialSearchQuery] = useState(() => initialParams.get('q') || '');
   const [initialCategory] = useState(() => {
@@ -56,7 +84,12 @@ function WebsiteContent() {
 
   // Sync tab changes with URL
   const handleTabChange = (newTab) => {
-    setActiveTab(newTab);
+    if (LEGAL_TABS.includes(newTab.toLowerCase())) {
+      setActiveLegalSection(newTab.toLowerCase() === 'policy' ? 'terms' : newTab.toLowerCase());
+      setActiveTab('legal');
+    } else {
+      setActiveTab(newTab);
+    }
     try {
       if (typeof window !== 'undefined' && window.history) {
         const url = new URL(window.location.href);
@@ -209,12 +242,33 @@ function WebsiteContent() {
             }}
           />
         )}
+
+        {activeTab === 'legal' && (
+          <LegalPolicyPage
+            initialTab={activeLegalSection}
+            onBackToHome={() => handleTabChange('home')}
+          />
+        )}
       </main>
 
-      {/* 4. Sticky Bottom Navigation for Mobile */}
+      {/* 4. Desktop-Only Legal & Compliance Footer (Hidden on Mobile) */}
+      <Footer
+        onOpenPolicy={handleOpenPolicyModal}
+        onChangeTab={handleTabChange}
+      />
+
+      {/* 5. Sticky Bottom Navigation for Mobile */}
       <BottomNav
-        activeTab={activeTab === 'checkout' ? 'home' : activeTab}
+        activeTab={activeTab === 'checkout' || activeTab === 'legal' ? 'home' : activeTab}
         onChangeTab={(tabId) => handleTabChange(tabId)}
+      />
+
+      {/* 6. Legal & Compliance Modal (Razorpay & Cashfree) */}
+      <PolicyModal
+        isOpen={isPolicyModalOpen}
+        onClose={() => setIsPolicyModalOpen(false)}
+        activePolicy={modalPolicyTab}
+        onSelectPolicy={(policyKey) => setModalPolicyTab(policyKey)}
       />
 
       {/* 5. Slide-out Cart Drawer */}
