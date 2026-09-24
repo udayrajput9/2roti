@@ -16,7 +16,7 @@ async function initSchema() {
     await db.schema.createTable('users', (table) => {
       table.increments('id').primary();
       table.string('firebase_uid').nullable().unique();
-      table.string('phone_number').notNullable().unique();
+      table.string('phone_number').nullable();
       table.string('name').nullable();
       table.string('email').nullable();
       table.string('password_hash').nullable();

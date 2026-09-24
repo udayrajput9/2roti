@@ -6,6 +6,7 @@ const { antiBotCheck } = require('../middleware/antiBotMiddleware');
 
 // Customer Auth
 router.post('/customer', antiBotCheck, authController.customerAuth);
+router.post('/customer/firebase', antiBotCheck, authController.firebaseCustomerAuth);
 router.post('/complete-profile', requireCustomer, authController.completeProfile);
 router.get('/customer/me', requireCustomer, authController.getCustomerMe);
 

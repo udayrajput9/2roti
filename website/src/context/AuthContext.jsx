@@ -40,11 +40,25 @@ export function AuthProvider({ children }) {
     return data.user;
   }
 
-  async function updateProfile({ name, location_id, email }) {
+  async function loginWithGoogle({ idToken, email, name, firebaseUid }) {
+    const res = await fetch('/api/auth/customer/firebase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken, email, name, firebaseUid })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Google sign-in failed');
+    }
+    setUser(data.user);
+    return data.user;
+  }
+
+  async function updateProfile({ name, phone, location_id, email, delivery_address_note }) {
     const res = await fetch('/api/auth/complete-profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, location_id, email })
+      body: JSON.stringify({ name, phone, location_id, email, delivery_address_note })
     });
     const data = await res.json();
     if (!res.ok || !data.success) {
@@ -71,14 +85,23 @@ export function AuthProvider({ children }) {
     } catch (e) {}
   }
 
+  const isProfileComplete = Boolean(
+    user &&
+    user.is_profile_complete &&
+    user.phone &&
+    !user.phone.startsWith('PENDING_') &&
+    user.default_location_id
+  );
+
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
         isAuthenticated: !!user,
-        isProfileComplete: user ? !!user.is_profile_complete : false,
+        isProfileComplete,
         loginCustomer,
+        loginWithGoogle,
         updateProfile,
         logout,
         refreshUser

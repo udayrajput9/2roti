@@ -88,6 +88,8 @@ function WebsiteContent() {
     );
   }, [menu]);
 
+  const [pendingCheckout, setPendingCheckout] = useState(false);
+
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-white flex flex-col font-sans selection:bg-[#FF5722] selection:text-white">
       
@@ -164,22 +166,45 @@ function WebsiteContent() {
         onClose={() => setIsCartOpen(false)}
         onProceedToCheckout={() => {
           setIsCartOpen(false);
+          if (!isAuthenticated) {
+            setPendingCheckout(true);
+            setIsAuthOpen(true);
+            return;
+          }
+          if (!isProfileComplete) {
+            setPendingCheckout(true);
+            return;
+          }
           setActiveTab('checkout');
         }}
       />
 
-      {/* 6. Phone OTP Auth Modal */}
+      {/* 6. Google Gmail / Phone Auth Modal */}
       <AuthModal
         isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onAuthSuccess={() => setIsAuthOpen(false)}
+        onClose={() => {
+          setIsAuthOpen(false);
+          setPendingCheckout(false);
+        }}
+        onAuthSuccess={() => {
+          setIsAuthOpen(false);
+          if (pendingCheckout && isProfileComplete) {
+            setActiveTab('checkout');
+            setPendingCheckout(false);
+          }
+        }}
       />
 
-      {/* 7. Mandatory Onboarding Profile Guard */}
+      {/* 7. Mandatory Compulsory Profile Onboarding Guard */}
       <OnboardingGuard
         isOpen={isAuthenticated && !isProfileComplete}
         locations={locations}
-        onClose={() => {}}
+        onClose={() => {
+          if (pendingCheckout) {
+            setActiveTab('checkout');
+            setPendingCheckout(false);
+          }
+        }}
       />
 
     </div>
