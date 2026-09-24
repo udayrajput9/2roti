@@ -13,4 +13,4 @@ Disallow: /checkout
 Disallow: /profile
 
 # Search Engine Sitemaps
-Sitemap: https://2roti.com/sitemap.xml
+Sitemap: https://www.doroti.shop/sitemap.xml
