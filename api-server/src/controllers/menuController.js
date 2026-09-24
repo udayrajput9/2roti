@@ -1,11 +1,40 @@
 const db = require('../config/database');
 const { parseMenuCsv } = require('../services/csvService');
 
+// High-Performance In-Memory Menu Cache
+let cachedMenu = null;
+let cacheExpiresAt = 0;
+const MENU_CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+let cachedLocations = null;
+let locationsExpiresAt = 0;
+
+function invalidateMenuCache() {
+  cachedMenu = null;
+  cacheExpiresAt = 0;
+}
+
+function invalidateLocationsCache() {
+  cachedLocations = null;
+  locationsExpiresAt = 0;
+}
+
 // 1. Get All Menu Items (Categorized)
 async function getMenu(req, res) {
   try {
+    const now = Date.now();
+    if (cachedMenu && now < cacheExpiresAt) {
+      return res.json({
+        success: true,
+        menu: cachedMenu,
+        cached: true
+      });
+    }
+
     const items = await db('menu_items')
-      .where({ is_available: true })
+      .where(function() {
+        this.where('is_available', true).orWhere('is_available', 1);
+      })
       .orderBy('category', 'asc')
       .orderBy('id', 'asc');
 
@@ -23,15 +52,20 @@ async function getMenu(req, res) {
     };
 
     items.forEach((item) => {
-      if (item.is_outlet_only) {
+      const isOutlet = item.is_outlet_only === true || item.is_outlet_only === 1 || item.is_outlet_only === '1';
+      if (isOutlet) {
         categorized.Outlet.push(item);
       } else {
-        if (!categorized[item.category]) {
-          categorized[item.category] = [];
+        const cat = item.category || 'Curry';
+        if (!categorized[cat]) {
+          categorized[cat] = [];
         }
-        categorized[item.category].push(item);
+        categorized[cat].push(item);
       }
     });
+
+    cachedMenu = categorized;
+    cacheExpiresAt = now + MENU_CACHE_TTL_MS;
 
     return res.json({
       success: true,
@@ -39,6 +73,9 @@ async function getMenu(req, res) {
     });
   } catch (err) {
     console.error('getMenu error:', err);
+    if (cachedMenu) {
+      return res.json({ success: true, menu: cachedMenu, fallback: true });
+    }
     return res.status(500).json({ success: false, message: 'Failed to fetch menu items.' });
   }
 }
@@ -47,9 +84,13 @@ async function getMenu(req, res) {
 async function getOutletMenu(req, res) {
   try {
     const items = await db('menu_items')
-      .where({ is_available: true })
+      .where(function() {
+        this.where('is_available', true).orWhere('is_available', 1);
+      })
       .andWhere(function() {
-        this.where({ is_outlet_only: true }).orWhereIn('category', ['Curry', 'Thali', 'Biryani', 'Pizza', 'Outlet Special', 'Breads', 'Rice', 'Rolls']);
+        this.where('is_outlet_only', true)
+          .orWhere('is_outlet_only', 1)
+          .orWhereIn('category', ['Curry', 'Thali', 'Biryani', 'Pizza', 'Outlet Special', 'Breads', 'Rice', 'Rolls']);
       })
       .orderBy('name', 'asc');
 
@@ -58,6 +99,7 @@ async function getOutletMenu(req, res) {
       items
     });
   } catch (err) {
+    console.error('getOutletMenu error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch outlet menu.' });
   }
 }

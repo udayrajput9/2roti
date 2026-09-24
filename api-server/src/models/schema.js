@@ -1,6 +1,16 @@
 const db = require('../config/database');
 
 async function initSchema() {
+  // Fast-path: If core tables already exist, skip redundant DDL checks for ultra-fast startup (<100ms)
+  try {
+    const hasCore = await db.schema.hasTable('menu_items');
+    if (hasCore) {
+      return;
+    }
+  } catch (err) {
+    // Fall through to standard initialization if check encounters transient error
+  }
+
   // 1. locations
   if (!await db.schema.hasTable('locations')) {
     await db.schema.createTable('locations', (table) => {

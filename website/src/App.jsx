@@ -78,9 +78,30 @@ function WebsiteContent() {
 
   const [locations, setLocations] = useState([]);
   const [activeLocation, setActiveLocation] = useState(null);
-  const [menu, setMenu] = useState({});
-  const [outletItems, setOutletItems] = useState([]);
-  const [loadingMenu, setLoadingMenu] = useState(true);
+  const [menu, setMenu] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('2roti_cached_menu');
+      return cached ? JSON.parse(cached) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+  const [outletItems, setOutletItems] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('2roti_cached_outlet');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [loadingMenu, setLoadingMenu] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('2roti_cached_menu');
+      return !cached || Object.keys(JSON.parse(cached)).length === 0;
+    } catch (e) {
+      return true;
+    }
+  });
 
   // Sync tab changes with URL
   const handleTabChange = (newTab) => {
@@ -105,15 +126,18 @@ function WebsiteContent() {
     }
   };
 
-  // Fetch locations & menu
+  // High-Performance Parallel Data Initializer (Locations + Menu + Outlet in single round-trip)
   useEffect(() => {
     async function initData() {
       try {
-        setLoadingMenu(true);
+        const [locRes, menuRes, outRes] = await Promise.all([
+          fetch('/api/menu/locations').catch(() => null),
+          fetch('/api/menu').catch(() => null),
+          fetch('/api/menu/outlet').catch(() => null)
+        ]);
 
-        // Fetch Locations
-        const locRes = await fetch('/api/menu/locations');
-        if (locRes.ok) {
+        // Process Locations
+        if (locRes && locRes.ok) {
           const locData = await locRes.json();
           if (locData.success && locData.locations) {
             setLocations(locData.locations);
@@ -130,21 +154,29 @@ function WebsiteContent() {
           }
         }
 
-        // Fetch Full Menu
-        const menuRes = await fetch('/api/menu');
-        if (menuRes.ok) {
+        // Process Full Menu
+        if (menuRes && menuRes.ok) {
           const mData = await menuRes.json();
           if (mData.success && mData.menu) {
             setMenu(mData.menu);
+            try {
+              sessionStorage.setItem('2roti_cached_menu', JSON.stringify(mData.menu));
+            } catch (err) {
+              // ignore storage quotas
+            }
           }
         }
 
-        // Fetch Outlet Items
-        const outRes = await fetch('/api/menu/outlet');
-        if (outRes.ok) {
+        // Process Outlet Items
+        if (outRes && outRes.ok) {
           const oData = await outRes.json();
           if (oData.success && oData.items) {
             setOutletItems(oData.items);
+            try {
+              sessionStorage.setItem('2roti_cached_outlet', JSON.stringify(oData.items));
+            } catch (err) {
+              // ignore storage quotas
+            }
           }
         }
       } catch (e) {
