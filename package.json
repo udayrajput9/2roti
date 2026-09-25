@@ -1,52 +1,52 @@
 {
-  "name": "2roti-ecosystem",
-  "version": "1.0.0",
-  "private": true,
-  "description": "2 Roti Food Ordering & Modern ERP Operations Ecosystem",
-  "scripts": {
-    "build": "npm install --prefix website && npm --prefix website run build",
-    "build:all": "npm install --prefix website && npm install --prefix admin-web && npm --prefix website run build && npm --prefix admin-web run build",
-    "build:website": "npm install --prefix website && npm --prefix website run build",
-    "build:admin": "npm install --prefix admin-web && npm --prefix admin-web run build",
-    "start:server": "cd api-server && npm start",
-    "start:website": "cd website && npm run dev",
-    "start:admin": "cd admin-web && npm run dev",
-    "seed": "cd api-server && npm run seed",
-    "seed:supabase": "node api-server/src/models/seed.js",
-    "optimize:images": "node scripts/optimize_all_images.js",
-    "test:apis": "node scripts/test_all_apis.js",
-    "evaluate:seo": "node scripts/evaluate_seo.js",
-    "evaluate:compliance": "node scripts/evaluate_payment_compliance.js"
-  },
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cookie-parser": "^1.4.6",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "express-rate-limit": "^7.3.1",
-    "firebase-admin": "^14.5.0",
-    "helmet": "^7.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "knex": "^3.1.0",
-    "multer": "^1.4.5-lts.1",
-    "pg": "^8.13.0",
-    "qrcode": "^1.5.4",
-    "razorpay": "^2.9.8",
-    "sqlite3": "^5.1.7",
-    "ws": "^8.17.1",
-    "zod": "^3.23.8"
-  },
-  "keywords": [
-    "food-delivery",
-    "erp",
-    "react",
-    "nodejs",
-    "razorpay",
-    "websockets",
-    "supabase"
-  ],
-  "devDependencies": {
-    "sharp": "^0.35.4"
-  }
+    "name":  "2roti-ecosystem",
+    "version":  "1.0.0",
+    "private":  true,
+    "description":  "2 Roti Food Ordering \u0026 Modern ERP Operations Ecosystem",
+    "scripts":  {
+                    "build":  "npm install --prefix website \u0026\u0026 npm --prefix website run build",
+                    "build:all":  "npm install --prefix website \u0026\u0026 npm install --prefix admin-web \u0026\u0026 npm --prefix website run build \u0026\u0026 npm --prefix admin-web run build",
+                    "build:website":  "npm install --prefix website \u0026\u0026 npm --prefix website run build",
+                    "build:admin":  "npm install --prefix admin-web \u0026\u0026 npm --prefix admin-web run build",
+                    "start:server":  "cd api-server \u0026\u0026 npm start",
+                    "start:website":  "cd website \u0026\u0026 npm run dev",
+                    "start:admin":  "cd admin-web \u0026\u0026 npm run dev",
+                    "seed":  "cd api-server \u0026\u0026 npm run seed",
+                    "seed:supabase":  "node api-server/src/models/seed.js",
+                    "optimize:images":  "node scripts/optimize_all_images.js",
+                    "test:apis":  "node scripts/test_all_apis.js",
+                    "evaluate:seo":  "node scripts/evaluate_seo.js",
+                    "evaluate:compliance":  "node scripts/evaluate_payment_compliance.js"
+                },
+    "dependencies":  {
+                         "bcryptjs":  "^2.4.3",
+                         "cookie-parser":  "^1.4.6",
+                         "cors":  "^2.8.5",
+                         "dotenv":  "^16.4.5",
+                         "express":  "^4.19.2",
+                         "express-rate-limit":  "^7.3.1",
+                         "firebase-admin":  "^14.5.0",
+                         "helmet":  "^7.1.0",
+                         "jsonwebtoken":  "^9.0.2",
+                         "knex":  "^3.1.0",
+                         "multer":  "^1.4.5-lts.1",
+                         "pg":  "^8.13.0",
+                         "qrcode":  "^1.5.4",
+                         "razorpay":  "^2.9.8",
+                         "sqlite3":  "^5.1.7",
+                         "ws":  "^8.17.1",
+                         "zod":  "^3.23.8"
+                     },
+    "keywords":  [
+                     "food-delivery",
+                     "erp",
+                     "react",
+                     "nodejs",
+                     "razorpay",
+                     "websockets",
+                     "supabase"
+                 ],
+    "devDependencies":  {
+                            "sharp":  "^0.35.4"
+                        }
 }
