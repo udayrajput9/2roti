@@ -12,6 +12,7 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
   const [hpTrap, setHpTrap] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [idempotencyKey] = useState(() => Math.random().toString(36).substring(2, 15) + Date.now().toString(36));
 
   const walletBalance = parseFloat(user?.wallet_balance || 0);
   const isWalletEligible = walletBalance >= 50.00 && walletBalance >= grandTotal;
@@ -68,7 +69,10 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
 
       const res = await fetch('/api/orders/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-idempotency-key': idempotencyKey
+        },
         body: JSON.stringify(orderPayload)
       });
 

@@ -6,6 +6,21 @@ async function createOrder(req, res) {
   try {
     const userId = req.user.id;
     const { items, location_id, delivery_address_note, is_outlet_order, payment_source, razorpay_order_id, razorpay_payment_id } = req.body;
+    const idempotencyKey = req.headers['x-idempotency-key'];
+
+    if (idempotencyKey) {
+      const existingOrder = await db('orders').where({ idempotency_key: idempotencyKey }).first();
+      if (existingOrder) {
+        const fullItems = await db('order_items').where({ order_id: existingOrder.id });
+        existingOrder.items = fullItems;
+        console.log(`[Idempotency] Returning existing order for key: ${idempotencyKey}`);
+        return res.json({
+          success: true,
+          message: 'Order retrieved successfully.',
+          order: existingOrder
+        });
+      }
+    }
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: 'Cart items cannot be empty.' });
@@ -170,6 +185,7 @@ async function createOrder(req, res) {
       // Insert Order
       const inserted = await trx('orders').insert({
         order_token: orderToken,
+        idempotency_key: idempotencyKey || null,
         user_id: userId,
         customer_name: req.user.name || 'Campus Student',
         customer_phone: req.user.phone_number,
