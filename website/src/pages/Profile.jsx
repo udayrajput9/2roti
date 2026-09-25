@@ -607,6 +607,14 @@ export default function ProfilePage({
                                 <span>Call Runner</span>
                               </a>
                             )}
+                            
+                            {/* Delivery OTP */}
+                            {isActive && order.delivery_otp && (
+                              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-950/80 border border-indigo-800/60 text-indigo-300">
+                                <span className="text-[10px] font-black uppercase">OTP:</span>
+                                <span className="font-mono text-sm font-black tracking-widest">{order.delivery_otp}</span>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

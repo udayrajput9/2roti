@@ -64,6 +64,7 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/vendor', vendorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/security', securityRoutes);
+app.use('/api/runner', require('./routes/runnerRoutes'));
 
 // Public Settings Route
 app.get('/api/settings', require('./controllers/statsController').getPublicSettings);

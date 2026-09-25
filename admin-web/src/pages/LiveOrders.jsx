@@ -744,6 +744,17 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
                                 </button>
                               </>
                             )}
+                            
+                            {!isPlaced && order.order_status !== 'CANCELLED' && order.order_status !== 'REFUNDED' && (
+                               <a 
+                                 href={`${import.meta.env.VITE_API_URL || ''}/api/orders/${order.id}/receipt`} 
+                                 target="_blank" 
+                                 rel="noreferrer"
+                                 className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md transition-colors"
+                               >
+                                 🖨️ QR Slip
+                               </a>
+                            )}
 
                             {/* Accepted Action */}
                             {isAccepted && (

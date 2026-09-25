@@ -124,6 +124,7 @@ async function initSchema() {
       table.string('order_status').defaultTo('PLACED'); // PLACED, ACCEPTED, PREPARING, READY, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, REFUNDED
       table.string('assigned_runner_name').nullable();
       table.string('assigned_runner_phone').nullable();
+          table.string('delivery_otp', 4).nullable();
       table.integer('settlement_id').nullable(); // Linked when settled with vendor
       table.boolean('is_cashback_awarded').defaultTo(false);
       table.boolean('is_test_simulated').defaultTo(false);

@@ -158,6 +158,7 @@ async function createOrder(req, res) {
     // Bug Fix: Token generation moved inside transaction to prevent race-condition duplicate tokens
     const crypto = require('crypto');
     const orderToken = `#2R-${Date.now()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+    const deliveryOtp = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit OTP
 
     let newOrderId = null;
 
@@ -204,6 +205,7 @@ async function createOrder(req, res) {
         razorpay_order_id: razorpay_order_id || null,
         razorpay_payment_id: razorpay_payment_id || null,
         upi_utr: upi_utr || null,
+        delivery_otp: deliveryOtp,
         order_status: 'PLACED'
       }).returning('id');
 
@@ -512,11 +514,119 @@ async function verifyPayment(req, res) {
   }
 }
 
+const QRCode = require('qrcode');
+
+// 7. Generate Receipt (HTML view)
+async function getReceipt(req, res) {
+  try {
+    const { id } = req.params;
+    const order = await db('orders').where({ id }).first();
+    if (!order) {
+      return res.status(404).send('Order not found.');
+    }
+    const items = await db('order_items').where({ order_id: id });
+
+    // Generate QR Code containing the order_token
+    const qrDataUrl = await QRCode.toDataURL(order.order_token, {
+      width: 150,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' }
+    });
+
+    const total = parseFloat(order.total_customer_price) + parseFloat(order.delivery_fee || 0);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Receipt - ${order.order_token}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { font-family: 'Courier New', Courier, monospace; background: #eee; padding: 20px; display: flex; justify-content: center; margin: 0; }
+          .receipt { background: #fff; width: 300px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+          .line { border-top: 1px dashed #333; margin: 10px 0; }
+          .flex-between { display: flex; justify-content: space-between; }
+          .item { font-size: 14px; margin-bottom: 5px; }
+          .qr-code { display: block; margin: 15px auto; }
+          .print-btn { display: block; width: 100%; padding: 10px; background: #000; color: #fff; border: none; font-size: 16px; cursor: pointer; margin-top: 20px; font-weight: bold; }
+          @media print { body { background: #fff; padding: 0; } .receipt { width: 100%; box-shadow: none; padding: 0; } .print-btn { display: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="receipt">
+          <h2 class="center" style="margin: 0 0 5px 0;">2 Roti Delivery</h2>
+          <div class="center" style="font-size: 12px; margin-bottom: 10px;">${order.location_name} Campus</div>
+          
+          <div class="line"></div>
+          
+          <div class="flex-between" style="font-size: 12px;">
+            <span>Token:</span>
+            <span class="bold">${order.order_token}</span>
+          </div>
+          <div class="flex-between" style="font-size: 12px;">
+            <span>Date:</span>
+            <span>${new Date(order.created_at).toLocaleString()}</span>
+          </div>
+          <div class="flex-between" style="font-size: 12px;">
+            <span>Customer:</span>
+            <span>${order.customer_name}</span>
+          </div>
+          <div class="flex-between" style="font-size: 12px;">
+            <span>Phone:</span>
+            <span>${order.customer_phone || '-'}</span>
+          </div>
+
+          <div class="line"></div>
+          
+          <div class="bold" style="font-size: 14px; margin-bottom: 5px;">Order Items:</div>
+          ${items.map(item => `
+            <div class="flex-between item">
+              <span>${item.quantity}x ${item.item_name}</span>
+              <span>Rs ${item.customer_price}</span>
+            </div>
+          `).join('')}
+          
+          <div class="line"></div>
+          
+          <div class="flex-between bold" style="font-size: 16px;">
+            <span>Total:</span>
+            <span>Rs ${total.toFixed(2)}</span>
+          </div>
+          
+          <div class="flex-between" style="font-size: 12px; margin-top: 5px;">
+            <span>Payment:</span>
+            <span style="text-transform: uppercase;">${order.payment_source} (${order.payment_status})</span>
+          </div>
+
+          <div class="line"></div>
+
+          <div class="center bold" style="font-size: 14px; margin-top: 15px;">SCAN TO DELIVER</div>
+          <img src="${qrDataUrl}" alt="QR Code" class="qr-code" />
+          
+          <div class="center" style="font-size: 12px;">Thank you for ordering!</div>
+          
+          <button class="print-btn" onclick="window.print()">Print Receipt</button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html');
+    return res.send(html);
+  } catch (err) {
+    console.error('getReceipt error:', err);
+    return res.status(500).send('Failed to generate receipt.');
+  }
+}
+
 module.exports = {
   createOrder,
   getCustomerOrders,
   getStaffOrders,
   updateOrderStatus,
   assignRunner,
-  verifyPayment
+  verifyPayment,
+  getReceipt
 };
