@@ -300,18 +300,23 @@ async function processRefund(req, res) {
 async function getPaymentLogs(req, res) {
   try {
     // Concurrency Optimization: Parallel DB fetch cuts network latency in half
-    const [webhooks, paidOrders] = await Promise.all([
+    const [webhooks, paidOrders, pendingUpiOrders] = await Promise.all([
       db('webhook_logs').orderBy('processed_at', 'desc').limit(50),
       db('orders')
         .whereIn('payment_status', ['PAID', 'REFUNDED'])
         .orderBy('updated_at', 'desc')
+        .limit(50),
+      db('orders')
+        .where({ payment_status: 'VERIFICATION_PENDING' })
+        .orderBy('created_at', 'desc')
         .limit(50)
     ]);
 
     return res.json({
       success: true,
       webhooks,
-      transactions: paidOrders
+      transactions: paidOrders,
+      pendingUpiOrders
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to fetch payment logs.' });

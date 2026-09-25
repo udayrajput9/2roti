@@ -140,7 +140,7 @@ export default function Sidebar({ activeTab, onSelectTab }) {
     },
     {
       id: 'payments',
-      label: 'Razorpay & Webhooks',
+      label: 'Payment Management',
       icon: CreditCard,
       roles: ['SUPER_ADMIN']
     },

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 export default function PaymentsWebhooks() {
-  const [logs, setLogs] = useState({ webhooks: [], transactions: [] });
+  const [logs, setLogs] = useState({ webhooks: [], transactions: [], pendingUpiOrders: [] });
   const [loading, setLoading] = useState(true);
   const [showSimModal, setShowSimModal] = useState(false);
   const [confirmText, setConfirmText] = useState('');
@@ -37,6 +37,27 @@ export default function PaymentsWebhooks() {
   useEffect(() => {
     fetchLogs();
   }, []);
+
+  const handleVerifyPayment = async (orderId) => {
+    if (!window.confirm("Verify that you have received this payment in your bank account?")) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/orders/${orderId}/verify-payment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Payment verification failed.');
+      }
+      alert("Payment verified successfully!");
+      fetchLogs();
+    } catch (e) {
+      alert(e.message || 'Payment verification error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSimulateWebhook = async (e) => {
     e.preventDefault();
@@ -100,8 +121,61 @@ export default function PaymentsWebhooks() {
       </div>
 
       {/* Grid: Live Transactions & Webhook Stream */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         
+        {/* Direct UPI Pending Verifications */}
+        <div className="bg-[#111827] border border-amber-800 rounded-3xl p-5 shadow-lg space-y-3 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-black text-amber-400 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 animate-pulse" />
+              <span>Pending Direct UPI Verifications</span>
+            </h3>
+            <span className="text-xs text-amber-500 font-bold">{logs.pendingUpiOrders?.length || 0} pending</span>
+          </div>
+
+          <div className="overflow-x-auto max-h-[300px]">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="text-amber-500/70 border-b border-amber-900/50 pb-2">
+                  <th className="pb-2 font-bold">Order Token</th>
+                  <th className="pb-2 font-bold">UTR Number</th>
+                  <th className="pb-2 font-bold">Amount</th>
+                  <th className="pb-2 font-bold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-amber-900/30">
+                {!logs.pendingUpiOrders || logs.pendingUpiOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="py-6 text-center text-amber-600/50 font-medium">
+                      No pending UPI verifications.
+                    </td>
+                  </tr>
+                ) : (
+                  logs.pendingUpiOrders.map((order) => (
+                    <tr key={order.id} className="hover:bg-amber-950/20">
+                      <td className="py-3 font-bold text-white">{order.order_token}</td>
+                      <td className="py-3 font-mono text-[11px] text-amber-300">
+                        {order.upi_utr || 'N/A'}
+                      </td>
+                      <td className="py-3 font-black text-white">
+                        ₹{(parseFloat(order.total_customer_price) + parseFloat(order.delivery_fee || 0)).toFixed(2)}
+                      </td>
+                      <td className="py-3 text-right">
+                        <button
+                          onClick={() => handleVerifyPayment(order.id)}
+                          className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10px] uppercase shadow-md active:scale-95"
+                        >
+                          Verify Payment
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Real-time Razorpay Transactions */}
         <div className="bg-[#111827] border border-slate-800 rounded-3xl p-5 shadow-lg space-y-3">
           <div className="flex items-center justify-between">
