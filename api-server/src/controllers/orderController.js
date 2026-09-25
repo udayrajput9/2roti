@@ -470,10 +470,53 @@ async function assignRunner(req, res) {
   }
 }
 
+// 6. Verify Direct UPI Payment
+async function verifyPayment(req, res) {
+  try {
+    const { id } = req.params;
+    const staff = req.staff;
+
+    // Only Admin/SuperAdmin can verify payments
+    if (staff.role === 'VENDOR') {
+      return res.status(403).json({ success: false, message: 'Vendors cannot verify payments.' });
+    }
+
+    const order = await db('orders').where({ id }).first();
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    if (order.payment_status !== 'VERIFICATION_PENDING') {
+      return res.status(400).json({ success: false, message: 'Order is not pending verification.' });
+    }
+
+    await db('orders').where({ id }).update({
+      payment_status: 'PAID',
+      updated_at: db.fn.now()
+    });
+
+    const updated = await db('orders').where({ id }).first();
+    const items = await db('order_items').where({ order_id: id });
+    updated.items = items;
+
+    broadcastOrderEvent('ORDER_STATUS_CHANGED', updated);
+
+    return res.json({
+      success: true,
+      message: 'Payment verified successfully.',
+      order: updated
+    });
+  } catch (err) {
+    console.error('verifyPayment error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to verify payment.' });
+  }
+}
+
 module.exports = {
   createOrder,
   getCustomerOrders,
   getStaffOrders,
   updateOrderStatus,
-  assignRunner
+  assignRunner,
+  verifyPayment
 };

@@ -145,6 +145,23 @@ export function LiveOrderProvider({ children }) {
     }
   };
 
+  const verifyPayment = async (orderId) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/verify-payment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Payment verification failed.');
+      }
+      setOrders(prev => prev.map(o => o.id === orderId ? data.order : o));
+      return data.order;
+    } catch (err) {
+      throw err;
+    }
+  };
+
   return (
     <LiveOrderContext.Provider
       value={{
@@ -155,6 +172,7 @@ export function LiveOrderProvider({ children }) {
         playAlertChime,
         updateOrderStatus,
         assignRunner,
+        verifyPayment,
         refreshOrders: fetchOrders
       }}
     >

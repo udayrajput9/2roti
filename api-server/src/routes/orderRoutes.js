@@ -12,5 +12,6 @@ router.get('/my-orders', requireCustomer, orderController.getCustomerOrders);
 router.get('/staff', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER', 'VENDOR']), orderController.getStaffOrders);
 router.patch('/:id/status', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER', 'VENDOR']), orderController.updateOrderStatus);
 router.patch('/:id/assign-runner', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER']), orderController.assignRunner);
+router.patch('/:id/verify-payment', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER']), orderController.verifyPayment);
 
 module.exports = router;

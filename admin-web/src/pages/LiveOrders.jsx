@@ -37,6 +37,7 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
     orders,
     updateOrderStatus,
     assignRunner,
+    verifyPayment,
     lastAlert,
     dismissAlert,
     playAlertChime,
@@ -226,6 +227,19 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
       await updateOrderStatus(orderId, nextStatus);
     } catch (e) {
       alert(e.message || 'Status update error');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleVerifyPayment = async (orderId) => {
+    if (!window.confirm("Verify that you have received this payment in your bank account?")) return;
+    try {
+      setLoadingAction(true);
+      await verifyPayment(orderId);
+      alert("Payment verified successfully!");
+    } catch (e) {
+      alert(e.message || 'Payment verification error');
     } finally {
       setLoadingAction(false);
     }
@@ -660,9 +674,21 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
 
                         {/* 7. Payment Source */}
                         <td className="py-3 px-3">
-                          <span className="uppercase text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300">
-                            {order.payment_source}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className="uppercase text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 w-fit">
+                              {order.payment_source}
+                            </span>
+                            {order.payment_status === 'VERIFICATION_PENDING' && (
+                              <span className="text-[10px] font-bold text-amber-400 bg-amber-950 px-1.5 py-0.5 rounded border border-amber-900 w-fit">
+                                PENDING VERIFY
+                              </span>
+                            )}
+                            {order.upi_utr && (
+                              <span className="text-[10px] font-mono text-slate-400">
+                                UTR: {order.upi_utr}
+                              </span>
+                            )}
+                          </div>
                         </td>
 
                         {/* 8. Campus Runner */}
@@ -689,6 +715,16 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
                         <td className="py-3 px-3 text-right">
                           <div className="flex items-center justify-end gap-1.5 flex-wrap">
                             
+                            {order.payment_status === 'VERIFICATION_PENDING' && (
+                              <button
+                                onClick={() => handleVerifyPayment(order.id)}
+                                disabled={loadingAction}
+                                className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md animate-pulse"
+                              >
+                                Verify UTR
+                              </button>
+                            )}
+
                             {/* Placed Actions */}
                             {isPlaced && (
                               <>

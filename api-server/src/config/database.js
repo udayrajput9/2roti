@@ -30,15 +30,19 @@ if (process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE
     }
   });
 } else {
-  const dbPath = process.env.VERCEL
-    ? path.join('/tmp', '2roti.sqlite')
-    : path.resolve(__dirname, '../../data/2roti.sqlite');
+  if (process.env.VERCEL) {
+    console.error('❌ CRITICAL ERROR: No DATABASE_URL provided on Vercel! Serverless function cannot start without a Postgres database.');
+    throw new Error('DATABASE_URL environment variable is missing on Vercel.');
+  }
+
+  const dbPath = path.resolve(__dirname, '../../data/2roti.sqlite');
   const fs = require('fs');
   const dataDir = path.dirname(dbPath);
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
+  console.log('⚠️ Running locally with SQLite fallback because DATABASE_URL is not set.');
   db = knex({
     client: 'sqlite3',
     connection: {
