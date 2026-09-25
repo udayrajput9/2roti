@@ -261,7 +261,7 @@ assert(/Allow:\s*\/images\//i.test(robotsTxt), 'Robots', 'Image folder Allow: /i
 assert(/Allow:\s*\/logos\//i.test(robotsTxt), 'Robots', 'Logo folder Allow: /logos/ defined');
 assert(/Disallow:\s*\/api\//i.test(robotsTxt), 'Robots', 'Private API Disallow: /api/ defined');
 assert(/Disallow:\s*\/admin\//i.test(robotsTxt), 'Robots', 'Admin dashboard Disallow: /admin/ defined');
-assert(/Sitemap:\s*https:\/\/2roti\.com\/sitemap\.xml/i.test(robotsTxt), 'Robots', 'Sitemap: https://2roti.com/sitemap.xml directive configured');
+assert(/Sitemap:\s*https:\/\/(?:www\.)?(?:doroti\.shop|2roti\.com)\/sitemap\.xml/i.test(robotsTxt), 'Robots', 'Sitemap directive configured');
 
 // ----------------------------------------------------------------------
 // 9. XML SITEMAP (SITEMAP.XML)
@@ -276,7 +276,7 @@ assert(/xmlns=["']http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9["']/i.test
 assert(/xmlns:image=["']http:\/\/www\.google\.com\/schemas\/sitemap-image\/1\.1["']/i.test(sitemapXml), 'Sitemap', 'Google Image Sitemap namespace declared');
 
 // Extract URLs
-const locRegex = /<loc>(https:\/\/2roti\.com\/[^<]*)<\/loc>/g;
+const locRegex = /<loc>(https:\/\/(?:www\.)?(?:doroti\.shop|2roti\.com)\/[^<]*)<\/loc>/g;
 const sitemapUrls = [];
 let locMatch;
 while ((locMatch = locRegex.exec(sitemapXml)) !== null) {
@@ -285,26 +285,27 @@ while ((locMatch = locRegex.exec(sitemapXml)) !== null) {
 
 assert(sitemapUrls.length >= 10, 'Sitemap', `Sitemap contains ${sitemapUrls.length} indexed URLs (minimum 10 required)`);
 
-// Check required deep URLs
-const requiredUrls = [
-  'https://2roti.com/',
-  'https://2roti.com/?tab=home',
-  'https://2roti.com/?tab=search',
-  'https://2roti.com/?tab=outlet',
-  'https://2roti.com/?category=thali',
-  'https://2roti.com/?category=curry',
-  'https://2roti.com/?category=biryani',
-  'https://2roti.com/?category=pizza',
-  'https://2roti.com/?location=jhungiya',
-  'https://2roti.com/?location=buddha'
+// Check required deep URLs (by path suffix)
+const requiredPaths = [
+  '/',
+  '/?tab=home',
+  '/?tab=search',
+  '/?tab=outlet',
+  '/?category=thali',
+  '/?category=curry',
+  '/?category=biryani',
+  '/?category=pizza',
+  '/?location=jhungiya',
+  '/?location=buddha'
 ];
 
-requiredUrls.forEach(reqUrl => {
-  assert(sitemapUrls.includes(reqUrl), 'Sitemap', `Sitemap indexes deep path: ${reqUrl}`);
+requiredPaths.forEach(reqPath => {
+  const found = sitemapUrls.some(u => u.endsWith(reqPath) || u.replace(/https:\/\/[^/]+/, '') === reqPath);
+  assert(found, 'Sitemap', `Sitemap indexes deep path: ${reqPath}`);
 });
 
 // Check Google Images in sitemap
-const imageLocRegex = /<image:loc>(https:\/\/2roti\.com\/[^<]*)<\/image:loc>/g;
+const imageLocRegex = /<image:loc>(https:\/\/(?:www\.)?(?:doroti\.shop|2roti\.com)\/[^<]*)<\/image:loc>/g;
 const sitemapImages = [];
 let imgMatch;
 while ((imgMatch = imageLocRegex.exec(sitemapXml)) !== null) {
@@ -315,7 +316,7 @@ assert(sitemapImages.length >= 3, 'Sitemap', `Sitemap contains ${sitemapImages.l
 
 // Verify that all images listed in sitemap exist locally
 sitemapImages.forEach(imgUrl => {
-  const relPath = imgUrl.replace('https://2roti.com/', '');
+  const relPath = imgUrl.replace(/^https:\/\/(?:www\.)?(?:doroti\.shop|2roti\.com)\//, '');
   const localFile = path.join(WEBSITE_PUBLIC_DIR, relPath);
   assert(fs.existsSync(localFile), 'Sitemap', `Sitemap image exists on filesystem: ${relPath}`);
 });

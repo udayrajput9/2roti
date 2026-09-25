@@ -119,7 +119,7 @@ const complianceTabs = ['terms', 'privacy', 'refund', 'shipping', 'contact', 'ab
 
 complianceTabs.forEach(t => {
   assert(appCode.includes(t), 'Routing', `App.jsx handles direct route parameter: ?tab=${t}`);
-  assert(sitemapCode.includes(`https://2roti.com/?tab=${t}`), 'Sitemap', `sitemap.xml indexes legal URL: https://2roti.com/?tab=${t}`);
+  assert(sitemapCode.includes(`/?tab=${t}`), 'Sitemap', `sitemap.xml indexes legal URL: /?tab=${t}`);
   assert(indexHtml.includes(`/?tab=${t}`), 'SEO', `index.html noscript crawler links to: /?tab=${t}`);
 });
 

@@ -30,7 +30,9 @@ if (process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE
     }
   });
 } else {
-  const dbPath = path.resolve(__dirname, '../../data/2roti.sqlite');
+  const dbPath = process.env.VERCEL
+    ? path.join('/tmp', '2roti.sqlite')
+    : path.resolve(__dirname, '../../data/2roti.sqlite');
   const fs = require('fs');
   const dataDir = path.dirname(dbPath);
   if (!fs.existsSync(dataDir)) {

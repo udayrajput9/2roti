@@ -2,6 +2,23 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
+async function parseJsonResponse(res, fallbackMessage = 'Server request failed') {
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    if (!res.ok) {
+      throw new Error(`Server returned status ${res.status}. Please check your connection or retry.`);
+    }
+    throw new Error(fallbackMessage);
+  }
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || fallbackMessage);
+  }
+  return data;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,9 +29,14 @@ export function AuthProvider({ children }) {
       try {
         const res = await fetch('/api/auth/customer/me');
         if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.user) {
-            setUser(data.user);
+          const text = await res.text();
+          try {
+            const data = JSON.parse(text);
+            if (data.success && data.user) {
+              setUser(data.user);
+            }
+          } catch (e) {
+            // Not valid JSON
           }
         }
       } catch (e) {
@@ -32,10 +54,7 @@ export function AuthProvider({ children }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, password, name, email })
     });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || 'Login failed');
-    }
+    const data = await parseJsonResponse(res, 'Login failed');
     setUser(data.user);
     return data.user;
   }
@@ -46,10 +65,7 @@ export function AuthProvider({ children }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken, email, name, firebaseUid })
     });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || 'Google sign-in failed');
-    }
+    const data = await parseJsonResponse(res, 'Google sign-in failed');
     setUser(data.user);
     return data.user;
   }
@@ -60,10 +76,7 @@ export function AuthProvider({ children }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, phone, location_id, email, delivery_address_note })
     });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || 'Failed to update profile');
-    }
+    const data = await parseJsonResponse(res, 'Failed to update profile');
     setUser(data.user);
     return data.user;
   }
@@ -79,8 +92,11 @@ export function AuthProvider({ children }) {
     try {
       const res = await fetch('/api/auth/customer/me');
       if (res.ok) {
-        const data = await res.json();
-        if (data.success) setUser(data.user);
+        const text = await res.text();
+        try {
+          const data = JSON.parse(text);
+          if (data.success) setUser(data.user);
+        } catch (e) {}
       }
     } catch (e) {}
   }
