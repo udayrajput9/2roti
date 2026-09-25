@@ -120,6 +120,7 @@ async function initSchema() {
       table.string('payment_status').defaultTo('PENDING'); // PENDING, PAID, FAILED, REFUNDED
       table.string('razorpay_order_id').nullable();
       table.string('razorpay_payment_id').nullable();
+          table.string('upi_utr').nullable();
       table.string('order_status').defaultTo('PLACED'); // PLACED, ACCEPTED, PREPARING, READY, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, REFUNDED
       table.string('assigned_runner_name').nullable();
       table.string('assigned_runner_phone').nullable();
