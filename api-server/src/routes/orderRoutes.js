@@ -16,6 +16,7 @@ router.patch('/:id/verify-payment', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANA
 
 // Receipt route (Staff can view, or we can make it public for runners to verify, or just Staff)
 // Actually we don't need auth here if we just want a simple link, but let's restrict it to staff
+router.get('/bulk-receipt', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER', 'VENDOR']), orderController.getBulkReceipt);
 router.get('/:id/receipt', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER', 'VENDOR']), orderController.getReceipt);
 
 module.exports = router;

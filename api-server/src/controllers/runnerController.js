@@ -24,6 +24,26 @@ async function getOrderByToken(req, res) {
   }
 }
 
+// 1.5 Get all active orders (for Runner Tabs)
+async function getActiveOrders(req, res) {
+  try {
+    const orders = await db('orders')
+      .whereIn('order_status', ['READY', 'OUT_FOR_DELIVERY'])
+      .orderBy('created_at', 'asc');
+      
+    // Do NOT expose OTPs
+    const safeOrders = orders.map(o => {
+      delete o.delivery_otp;
+      return o;
+    });
+
+    return res.json({ success: true, orders: safeOrders });
+  } catch (err) {
+    console.error('getActiveOrders error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch active orders.' });
+  }
+}
+
 // 2. Verify OTP and Mark as Delivered
 async function verifyOtpAndDeliver(req, res) {
   try {
@@ -94,5 +114,6 @@ async function verifyOtpAndDeliver(req, res) {
 
 module.exports = {
   getOrderByToken,
+  getActiveOrders,
   verifyOtpAndDeliver
 };

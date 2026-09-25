@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Bell,
   CheckCircle,
+  Printer,
   Clock,
   MapPin,
   Phone,
@@ -71,6 +72,8 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
   const [selectedOrderForRunner, setSelectedOrderForRunner] = useState(null);
   const [runnerName, setRunnerName] = useState('');
   const [runnerPhone, setRunnerPhone] = useState('');
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printCampusFilter, setPrintCampusFilter] = useState('ALL');
   const [loadingAction, setLoadingAction] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -240,6 +243,48 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
       alert("Payment verified successfully!");
     } catch (e) {
       alert(e.message || 'Payment verification error');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleBulkAccept = async () => {
+    const placedOrders = filteredOrders.filter(o => o.order_status === 'PLACED');
+    if (placedOrders.length === 0) return alert("No PLACED orders to accept.");
+    if (!window.confirm(`Accept ${placedOrders.length} orders?`)) return;
+    
+    setLoadingAction(true);
+    try {
+      for (const order of placedOrders) {
+        await updateStatus(order.id, 'ACCEPTED');
+      }
+    } catch (err) {
+      alert("Some orders failed to accept.");
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleBulkPrintReceipts = () => {
+    const acceptedOrders = filteredOrders.filter(o => o.order_status === 'ACCEPTED');
+    if (acceptedOrders.length === 0) return alert("No ACCEPTED orders to print.");
+    const ids = acceptedOrders.map(o => o.id).join(',');
+    window.open(`${import.meta.env.VITE_API_URL || ''}/api/orders/bulk-receipt?ids=${ids}`, '_blank');
+  };
+
+  const handleBulkDispatch = async () => {
+    const readyOrders = filteredOrders.filter(o => o.order_status === 'READY');
+    if (readyOrders.length === 0) return alert("No READY orders to dispatch.");
+    if (!window.confirm(`Dispatch ${readyOrders.length} orders?`)) return;
+    
+    setLoadingAction(true);
+    try {
+      for (const order of readyOrders) {
+        const nextStatus = order.is_outlet_order ? 'DELIVERED' : 'OUT_FOR_DELIVERY';
+        await updateStatus(order.id, nextStatus);
+      }
+    } catch (err) {
+      alert("Some orders failed to dispatch.");
     } finally {
       setLoadingAction(false);
     }
@@ -434,6 +479,39 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-[#FF5722]' : ''}`} />
           </button>
+
+          {/* Bulk Actions */}
+          {filterStatus === 'PLACED' && (
+            <button
+              onClick={handleBulkAccept}
+              disabled={loadingAction}
+              className="px-3 py-1.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md transition-colors whitespace-nowrap flex items-center gap-1.5"
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              Accept All PLACED
+            </button>
+          )}
+          
+          {filterStatus === 'ACCEPTED' && (
+            <button
+              onClick={handleBulkPrintReceiptsClick}
+              className="px-3 py-1.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md transition-colors flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Print All ACCEPTED Slips
+            </button>
+          )}
+
+          {filterStatus === 'READY' && (
+            <button
+              onClick={handleBulkDispatch}
+              disabled={loadingAction}
+              className="px-3 py-1.5 rounded-2xl bg-[#FF5722] hover:bg-[#F4511E] text-white text-xs font-bold shadow-md transition-colors whitespace-nowrap flex items-center gap-1.5"
+            >
+              <Bike className="w-3.5 h-3.5" />
+              Dispatch All READY
+            </button>
+          )}
 
           {/* Audio Chime Test */}
           <button
@@ -1122,3 +1200,6 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
     </div>
   );
 }
+
+
+

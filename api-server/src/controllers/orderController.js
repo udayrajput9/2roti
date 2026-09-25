@@ -621,6 +621,131 @@ async function getReceipt(req, res) {
   }
 }
 
+// 8. Bulk Receipt Generator
+async function getBulkReceipt(req, res) {
+  try {
+    const { ids } = req.query;
+    if (!ids) return res.status(400).send('No order IDs provided.');
+    
+    const idList = ids.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+    if (idList.length === 0) return res.status(400).send('Invalid IDs.');
+
+    const orders = await db('orders').whereIn('id', idList);
+    if (orders.length === 0) return res.status(404).send('Orders not found.');
+
+    const items = await db('order_items').whereIn('order_id', idList);
+    const itemsByOrderMap = new Map();
+    for (const item of items) {
+      if (!itemsByOrderMap.has(item.order_id)) {
+        itemsByOrderMap.set(item.order_id, []);
+      }
+      itemsByOrderMap.get(item.order_id).push(item);
+    }
+
+    let receiptsHtml = '';
+
+    for (const order of orders) {
+      const orderItems = itemsByOrderMap.get(order.id) || [];
+      const qrDataUrl = await QRCode.toDataURL(order.order_token, {
+        width: 150,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' }
+      });
+      const total = parseFloat(order.total_customer_price) + parseFloat(order.delivery_fee || 0);
+
+      receiptsHtml += `
+        <div class="receipt">
+          <h2 class="center" style="margin: 0 0 5px 0;">2 Roti Delivery</h2>
+          <div class="center" style="font-size: 12px; margin-bottom: 10px;">${order.location_name} Campus</div>
+          
+          <div class="line"></div>
+          
+          <div class="flex-between" style="font-size: 12px;">
+            <span>Token:</span>
+            <span class="bold">${order.order_token}</span>
+          </div>
+          <div class="flex-between" style="font-size: 12px;">
+            <span>Date:</span>
+            <span>${new Date(order.created_at).toLocaleString()}</span>
+          </div>
+          <div class="flex-between" style="font-size: 12px;">
+            <span>Customer:</span>
+            <span>${order.customer_name}</span>
+          </div>
+          <div class="flex-between" style="font-size: 12px;">
+            <span>Phone:</span>
+            <span>${order.customer_phone || '-'}</span>
+          </div>
+
+          <div class="line"></div>
+          
+          <div class="bold" style="font-size: 14px; margin-bottom: 5px;">Order Items:</div>
+          ${orderItems.map(item => `
+            <div class="flex-between item">
+              <span>${item.quantity}x ${item.item_name}</span>
+              <span>Rs ${item.customer_price}</span>
+            </div>
+          `).join('')}
+          
+          <div class="line"></div>
+          
+          <div class="flex-between bold" style="font-size: 16px;">
+            <span>Total:</span>
+            <span>Rs ${total.toFixed(2)}</span>
+          </div>
+          
+          <div class="flex-between" style="font-size: 12px; margin-top: 5px;">
+            <span>Payment:</span>
+            <span style="text-transform: uppercase;">${order.payment_source} (${order.payment_status})</span>
+          </div>
+
+          <div class="line"></div>
+
+          <div class="center bold" style="font-size: 14px; margin-top: 15px;">SCAN TO DELIVER</div>
+          <img src="${qrDataUrl}" alt="QR Code" class="qr-code" />
+          
+          <div class="center" style="font-size: 12px;">Thank you for ordering!</div>
+        </div>
+      `;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Bulk Receipts</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { font-family: 'Courier New', Courier, monospace; background: #eee; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 40px; margin: 0; }
+          .receipt { background: #fff; width: 300px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); page-break-after: always; }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+          .line { border-top: 1px dashed #333; margin: 10px 0; }
+          .flex-between { display: flex; justify-content: space-between; }
+          .item { font-size: 14px; margin-bottom: 5px; }
+          .qr-code { display: block; margin: 15px auto; }
+          .print-btn-container { position: fixed; bottom: 20px; right: 20px; }
+          .print-btn { padding: 15px 30px; background: #FF5722; color: #fff; border: none; border-radius: 30px; font-size: 16px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 12px rgba(255,87,34,0.4); }
+          @media print { body { background: #fff; padding: 0; display: block; } .receipt { width: 100%; box-shadow: none; padding: 0; margin-bottom: 0; page-break-after: always; } .print-btn-container { display: none; } }
+        </style>
+      </head>
+      <body>
+        ${receiptsHtml}
+        <div class="print-btn-container">
+          <button class="print-btn" onclick="window.print()">Print All Receipts</button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html');
+    return res.send(html);
+  } catch (err) {
+    console.error('getBulkReceipt error:', err);
+    return res.status(500).send('Failed to generate bulk receipts.');
+  }
+}
+
 module.exports = {
   createOrder,
   getCustomerOrders,
@@ -628,5 +753,6 @@ module.exports = {
   updateOrderStatus,
   assignRunner,
   verifyPayment,
-  getReceipt
+  getReceipt,
+  getBulkReceipt
 };
