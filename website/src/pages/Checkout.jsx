@@ -12,6 +12,8 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
   const [hpTrap, setHpTrap] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showUPIModal, setShowUPIModal] = useState(false);
+  const [upiUtr, setUpiUtr] = useState('');
   const [idempotencyKey] = useState(() => Math.random().toString(36).substring(2, 15) + Date.now().toString(36));
 
   const walletBalance = parseFloat(user?.wallet_balance || 0);
@@ -34,6 +36,16 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
     }
 
     try {
+      if (paymentMethod === 'direct_upi' && !showUPIModal) {
+        setShowUPIModal(true);
+        return;
+      }
+      
+      if (paymentMethod === 'direct_upi' && (!upiUtr || upiUtr.length < 12)) {
+         setError('Please enter a valid 12-digit UPI UTR/Reference number.');
+         return;
+      }
+
       setLoading(true);
       setError('');
 
@@ -64,6 +76,7 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
         payment_source: paymentSource,
         razorpay_order_id: rzpOrderId,
         razorpay_payment_id: rzpPaymentId,
+        upi_utr: paymentSource === 'direct_upi' ? upiUtr : null,
         _hp_trap: hpTrap
       };
 
@@ -91,6 +104,81 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
       setLoading(false);
     }
   };
+
+  if (showUPIModal) {
+    const upiUrl = `upi://pay?pa=udaypratapsinghv-1@oksbi&pn=2Roti%20Delivery&am=${grandTotal.toFixed(2)}&cu=INR&tn=Order_Checkout`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}`;
+
+    return (
+      <div className="pb-28 pt-3 px-3 sm:px-4 max-w-2xl mx-auto space-y-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowUPIModal(false)}
+            className="p-2.5 rounded-2xl bg-[#141414] hover:bg-neutral-800 border border-neutral-800 text-neutral-400 hover:text-white transition-all active:scale-95 shadow-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div>
+            <h1 className="text-base sm:text-lg font-black text-white tracking-tight leading-none">
+              Direct UPI Payment
+            </h1>
+            <p className="text-[11px] text-neutral-400 mt-0.5">
+              Pay via any UPI App to place order
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-3.5 rounded-2xl bg-rose-950/80 border border-rose-800/80 text-xs text-rose-200 flex items-center gap-2 shadow-md">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="bg-[#121212] border border-neutral-800/90 rounded-3xl p-5 shadow-lg space-y-5 text-center">
+          <div>
+            <div className="text-sm font-bold text-neutral-400 mb-1">Amount to Pay</div>
+            <div className="text-4xl font-black text-[#FF5722]">₹{grandTotal.toFixed(2)}</div>
+          </div>
+
+          <div className="bg-white p-2 w-max mx-auto rounded-xl">
+            <img src={qrUrl} alt="UPI QR Code" className="w-40 h-40 object-contain" />
+          </div>
+
+          <div className="text-xs text-neutral-400 font-medium px-4">
+            Scan this QR using any UPI app (GPay, PhonePe, Paytm) OR click the button below on your mobile device.
+          </div>
+
+          <a 
+            href={upiUrl}
+            className="w-full py-3.5 rounded-2xl bg-[#FF5722] hover:bg-[#F4511E] text-white font-black text-xs uppercase tracking-wider flex items-center justify-center shadow-lg transition-all"
+          >
+            Open UPI App to Pay
+          </a>
+
+          <div className="pt-4 border-t border-neutral-800 space-y-3">
+            <div className="text-left text-xs text-neutral-300 font-bold">
+              Step 2: Enter 12-digit UTR / Reference No.
+            </div>
+            <input
+              type="text"
+              value={upiUtr}
+              onChange={(e) => setUpiUtr(e.target.value.replace(/\D/g, '').substring(0,12))}
+              placeholder="e.g. 312345678901"
+              className="w-full bg-[#181818] border border-neutral-700/80 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-[#FF5722] transition-all font-medium text-center tracking-widest"
+            />
+            <button
+              onClick={handlePlaceOrder}
+              disabled={loading || upiUtr.length < 12}
+              className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider transition-all"
+            >
+              {loading ? 'Verifying...' : 'Submit & Place Order'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-28 pt-3 px-3 sm:px-4 max-w-2xl mx-auto space-y-4">
@@ -224,7 +312,45 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
             </div>
           </div>
 
-          )}{sysSettings?.payment_methods?.razorpay !== false && (<div
+          )}{sysSettings?.payment_methods?.direct_upi !== false && (<div
+            onClick={() => setPaymentMethod('direct_upi')}
+            className={`p-3.5 rounded-2xl border transition-all flex items-start justify-between cursor-pointer ${
+              paymentMethod === 'direct_upi'
+                ? 'bg-[#FF5722]/15 border-[#FF5722] text-white shadow-[0_0_20px_rgba(255,87,34,0.15)] ring-1 ring-[#FF5722]'
+                : 'bg-[#181818] border-neutral-700/80 hover:border-neutral-500 text-neutral-200'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div className={`p-2 rounded-xl mt-0.5 ${paymentMethod === 'direct_upi' ? 'bg-[#FF5722] text-white' : 'bg-neutral-800 text-neutral-400'}`}>
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs sm:text-sm font-black">Direct UPI (Zero Fee)</span>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/80 px-2 py-0.5 rounded-full font-black">
+                    Recommended
+                  </span>
+                </div>
+                <p className="text-[11px] text-neutral-400 mt-0.5">
+                  Pay directly to 2Roti via GPay, PhonePe, Paytm (No Gateway Fees)
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-1">
+              <input
+                type="radio"
+                name="payment_opt"
+                checked={paymentMethod === 'direct_upi'}
+                onChange={() => setPaymentMethod('direct_upi')}
+                className="w-4 h-4 text-[#FF5722] focus:ring-0 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          )}
+
+          {sysSettings?.payment_methods?.razorpay !== false && (<div
             onClick={() => setPaymentMethod('razorpay')}
             className={`p-3.5 rounded-2xl border transition-all flex items-start justify-between cursor-pointer ${
               paymentMethod === 'razorpay'
@@ -238,13 +364,10 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs sm:text-sm font-black">Online Payment (UPI, Cards)</span>
-                  <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/80 px-2 py-0.5 rounded-full font-black">
-                    +₹3 Cashback
-                  </span>
+                  <span className="text-xs sm:text-sm font-black">Online Payment (Razorpay)</span>
                 </div>
                 <p className="text-[11px] text-neutral-400 mt-0.5">
-                  UPI (GPay, PhonePe, Paytm, QR), Cards & Netbanking
+                  UPI, Cards & Netbanking via Gateway
                 </p>
               </div>
             </div>

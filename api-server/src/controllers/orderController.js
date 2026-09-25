@@ -5,7 +5,7 @@ const { broadcastOrderEvent } = require('../services/socketService');
 async function createOrder(req, res) {
   try {
     const userId = req.user.id;
-    const { items, location_id, delivery_address_note, is_outlet_order, payment_source, razorpay_order_id, razorpay_payment_id } = req.body;
+    const { items, location_id, delivery_address_note, is_outlet_order, payment_source, razorpay_order_id, razorpay_payment_id, upi_utr } = req.body;
     const idempotencyKey = req.headers['x-idempotency-key'];
 
     if (idempotencyKey) {
@@ -151,6 +151,8 @@ async function createOrder(req, res) {
       paymentStatus = 'PAID';
     } else if (chosenPaymentSource === 'cod_outlet') {
       paymentStatus = 'PENDING'; // Paid at counter
+    } else if (chosenPaymentSource === 'direct_upi') {
+      paymentStatus = 'VERIFICATION_PENDING';
     }
 
     // Bug Fix: Token generation moved inside transaction to prevent race-condition duplicate tokens
@@ -201,6 +203,7 @@ async function createOrder(req, res) {
         payment_status: paymentStatus,
         razorpay_order_id: razorpay_order_id || null,
         razorpay_payment_id: razorpay_payment_id || null,
+        upi_utr: upi_utr || null,
         order_status: 'PLACED'
       }).returning('id');
 
