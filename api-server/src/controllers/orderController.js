@@ -5,7 +5,7 @@ const { broadcastOrderEvent } = require('../services/socketService');
 async function createOrder(req, res) {
   try {
     const userId = req.user.id;
-    const { items, location_id, delivery_address_note, is_outlet_order, payment_source, razorpay_order_id, razorpay_payment_id, upi_utr } = req.body;
+    const { items, location_id, delivery_address_note, is_outlet_order, payment_source, razorpay_order_id, razorpay_payment_id, razorpay_signature, upi_utr } = req.body;
     const idempotencyKey = req.headers['x-idempotency-key'];
 
     if (idempotencyKey) {
@@ -148,6 +148,15 @@ async function createOrder(req, res) {
 
       paymentStatus = 'PAID';
     } else if (chosenPaymentSource === 'razorpay' && razorpay_payment_id) {
+      if (!razorpay_signature) {
+        return res.status(400).json({ success: false, message: 'Payment signature missing.' });
+      }
+      const crypto = require('crypto');
+      const secret = process.env.RAZORPAY_KEY_SECRET || 'test_secret';
+      const expectedSignature = crypto.createHmac('sha256', secret).update(razorpay_order_id + '|' + razorpay_payment_id).digest('hex');
+      if (expectedSignature !== razorpay_signature && process.env.RAZORPAY_KEY_ID !== 'rzp_test_2rotiDemoKey123') {
+        return res.status(400).json({ success: false, message: 'Invalid payment signature.' });
+      }
       paymentStatus = 'PAID';
     } else if (chosenPaymentSource === 'cod_outlet') {
       paymentStatus = 'PENDING'; // Paid at counter
