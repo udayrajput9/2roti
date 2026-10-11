@@ -705,14 +705,8 @@ export default function ProfilePage({
                       </div>
                     </div>
 
-                    {/* QR Code Delivery Verification (Available from 7:30 PM IST for active orders) */}
-                    {['PLACED', 'ACCEPTED', 'READY', 'OUT_FOR_DELIVERY'].includes(order.order_status) && (() => {
-                      const now = new Date();
-                      const istOffset = 5.5 * 60 * 60 * 1000;
-                      const istTime = new Date(now.getTime() + istOffset);
-                      const totalMins = istTime.getUTCHours() * 60 + istTime.getUTCMinutes();
-                      return totalMins >= 1170; // 19:30 IST = 1170 mins
-                    })() && (
+                    {/* QR Code Delivery Verification (Available for active orders to show to runner) */}
+                    {['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'].includes(order.order_status) && (
                       <div className="pt-3 border-t border-neutral-800/80 flex flex-col items-center justify-center p-4 bg-[#181818] rounded-2xl border border-neutral-700/60 text-center space-y-2.5">
                         <span className="text-[11px] font-black uppercase tracking-wider text-amber-400">
                           Show this QR to your delivery person
