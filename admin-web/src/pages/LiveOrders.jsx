@@ -878,6 +878,16 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
                             <span className="uppercase text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 w-fit">
                               {order.payment_source}
                             </span>
+                            {order.payment_status === 'REFUNDED' && (
+                              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800 w-fit">
+                                💸 REFUNDED
+                              </span>
+                            )}
+                            {order.payment_status === 'REFUND_FAILED' && (
+                              <span className="text-[10px] font-bold text-rose-400 bg-rose-950 px-1.5 py-0.5 rounded border border-rose-900 w-fit animate-pulse">
+                                ⚠️ REFUND FAILED
+                              </span>
+                            )}
                             {order.payment_status === 'VERIFICATION_PENDING' && (
                               <span className="text-[10px] font-bold text-amber-400 bg-amber-950 px-1.5 py-0.5 rounded border border-amber-900 w-fit">
                                 PENDING VERIFY

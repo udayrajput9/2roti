@@ -550,14 +550,60 @@ export default function ProfilePage({
                           isDelivered
                             ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/60'
                             : isCancelled
-                            ? 'bg-rose-950/80 text-rose-400 border border-rose-800/60'
+                            ? order.payment_status === 'REFUNDED'
+                              ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/60'
+                              : 'bg-rose-950/80 text-rose-400 border border-rose-800/60'
                             : 'bg-[#FF5722]/20 text-[#FF7043] border border-[#FF5722]/50 animate-pulse'
                         }`}
                       >
                         {isActive && <span className="w-2 h-2 rounded-full bg-[#FF5722] animate-ping" />}
-                        <span>{order.order_status.replace(/_/g, ' ')}</span>
+                        <span>
+                          {isCancelled && order.payment_status === 'REFUNDED'
+                            ? 'CANCELLED & REFUNDED'
+                            : order.order_status.replace(/_/g, ' ')}
+                        </span>
                       </span>
                     </div>
+
+                    {/* Cancelled & Refund Information Banner */}
+                    {isCancelled && (
+                      <div className={`p-3 rounded-2xl border text-xs font-bold flex items-center justify-between gap-2 ${
+                        order.payment_status === 'REFUNDED'
+                          ? 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300'
+                          : order.payment_status === 'REFUND_FAILED'
+                          ? 'bg-rose-950/60 border-rose-800/80 text-rose-300'
+                          : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-base shrink-0">
+                            {order.payment_status === 'REFUNDED' ? '💰' : order.payment_status === 'REFUND_FAILED' ? '⚠️' : 'ℹ️'}
+                          </span>
+                          <div>
+                            <p className="font-black">
+                              {order.payment_status === 'REFUNDED'
+                                ? 'Order Cancelled & Refund Initiated'
+                                : order.payment_status === 'REFUND_FAILED'
+                                ? 'Order Cancelled (Refund Verification Pending)'
+                                : 'Order Cancelled'}
+                            </p>
+                            <p className="text-[10px] font-medium opacity-85 mt-0.5">
+                              {order.payment_status === 'REFUNDED'
+                                ? order.payment_source === 'wallet'
+                                  ? 'Amount credited back to your 2Roti Wallet instantly.'
+                                  : 'Amount will reflect in your bank/UPI account within 3-5 working days.'
+                                : order.payment_status === 'REFUND_FAILED'
+                                ? 'Gateway reported a delay. Our operations team will verify manually.'
+                                : 'No payment was collected for this order.'}
+                            </p>
+                          </div>
+                        </div>
+                        {order.payment_status === 'REFUNDED' && (
+                          <span className="text-xs font-black text-emerald-400 shrink-0">
+                            +₹{(parseFloat(order.total_customer_price || 0) + parseFloat(order.delivery_fee || 0)).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Live Progress Bar Stepper */}
                     {!isCancelled && (

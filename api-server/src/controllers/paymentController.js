@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const db = require('../config/database');
 const Razorpay = require('razorpay');
+const { broadcastOrderEvent } = require('../services/socketService');
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_2rotiDemoKey123';
 const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_2rotiDemoSecret456';
@@ -151,6 +152,31 @@ async function handleWebhook(req, res) {
           payment_status: 'PAID',
           updated_at: db.fn.now()
         });
+      }
+    }
+
+    // Handle refund webhook events from Razorpay
+    if (eventType === 'refund.processed' || eventType === 'refund.created') {
+      const refundEntity = event.payload && event.payload.refund ? event.payload.refund.entity : null;
+      if (refundEntity && refundEntity.payment_id) {
+        const matchedOrder = await db('orders').where({ razorpay_payment_id: refundEntity.payment_id }).first();
+        if (matchedOrder) {
+          const refundAmount = refundEntity.amount ? (refundEntity.amount / 100).toFixed(2) : 'Full';
+          const existingNote = matchedOrder.delivery_address_note || '';
+          const appendNote = existingNote.includes('[Refund:') ? '' : ` [Refund: ₹${refundAmount} via Razorpay Webhook (ID: ${refundEntity.id})]`;
+
+          await db('orders').where({ id: matchedOrder.id }).update({
+            payment_status: 'REFUNDED',
+            order_status: 'CANCELLED',
+            delivery_address_note: (existingNote + appendNote).trim().substring(0, 250),
+            updated_at: db.fn.now()
+          });
+
+          const updated = await db('orders').where({ id: matchedOrder.id }).first();
+          const items = await db('order_items').where({ order_id: matchedOrder.id });
+          updated.items = items;
+          broadcastOrderEvent('ORDER_STATUS_CHANGED', updated);
+        }
       }
     }
 

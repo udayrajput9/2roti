@@ -1544,29 +1544,63 @@ async function executeRefundForOrder(order, reason, staffEmail) {
 
   if (order.payment_status === 'PAID' && refundAmount > 0) {
     // A. Razorpay Refund
-    if (order.payment_source === 'razorpay' && order.razorpay_payment_id) {
-      const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_2rotiDemoKey123';
-      const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_2rotiDemoSecret456';
+    if (order.payment_source === 'razorpay') {
+      const RAZORPAY_KEY_ID = (process.env.RAZORPAY_KEY_ID || 'rzp_test_2rotiDemoKey123').trim();
+      const RAZORPAY_KEY_SECRET = (process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_2rotiDemoSecret456').trim();
       
       if (RAZORPAY_KEY_ID !== 'rzp_test_2rotiDemoKey123') {
         const Razorpay = require('razorpay');
         const rzp = new Razorpay({ key_id: RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET });
-        try {
-          const rzpRes = await rzp.payments.refund(order.razorpay_payment_id, {
-            amount: Math.round(refundAmount * 100), // in paise
-            speed: 'normal',
-            notes: {
-              order_token: order.order_token,
-              reason: reason || 'Kitchen order cancelled',
-              cancelled_by: staffEmail || 'admin'
+
+        let paymentId = order.razorpay_payment_id;
+
+        // Fallback: If razorpay_payment_id was null, fetch payments from razorpay_order_id
+        if (!paymentId && order.razorpay_order_id) {
+          try {
+            const paymentsList = await rzp.orders.fetchPayments(order.razorpay_order_id);
+            const capturedPayment = paymentsList.items?.find(p => p.status === 'captured') || paymentsList.items?.[0];
+            if (capturedPayment) {
+              paymentId = capturedPayment.id;
+              await db('orders').where({ id: order.id }).update({ razorpay_payment_id: paymentId });
             }
-          });
-          refundResult.refund_id = rzpRes.id;
-          refundResult.status = rzpRes.status || 'processed';
-        } catch (rzpErr) {
-          console.error(`Razorpay refund error for ${order.order_token}:`, rzpErr.message || rzpErr);
-          refundResult.refund_id = `FAILED: ${rzpErr.error?.description || rzpErr.message || 'Razorpay Gateway Error'}`;
+          } catch (fetchErr) {
+            console.error(`Failed to fetch payment id from order id ${order.razorpay_order_id}:`, fetchErr.message);
+          }
+        }
+
+        if (paymentId) {
+          try {
+            const rzpRes = await rzp.payments.refund(paymentId, {
+              amount: Math.round(refundAmount * 100), // in paise
+              speed: 'optimum', // Instant where supported, auto-fallback to normal
+              notes: {
+                order_token: String(order.order_token || '').substring(0, 30),
+                reason: String(reason || 'Kitchen order cancelled').substring(0, 30),
+                cancelled_by: String(staffEmail || 'admin').substring(0, 30)
+              }
+            });
+            refundResult.refund_id = rzpRes.id;
+            refundResult.status = rzpRes.status || 'processed';
+          } catch (rzpErr) {
+            const errMsg = rzpErr.error?.description || rzpErr.message || 'Razorpay Gateway Error';
+            console.error(`Razorpay refund error for ${order.order_token}:`, errMsg);
+
+            if (errMsg.toLowerCase().includes('already been refunded') || errMsg.toLowerCase().includes('fully refunded')) {
+              refundResult.refund_id = 'already_refunded_on_gateway';
+              refundResult.status = 'processed';
+              refundResult.already_refunded = true;
+            } else {
+              refundResult.success = false;
+              refundResult.gateway_error = true;
+              refundResult.refund_id = `FAILED: ${errMsg}`;
+              refundResult.error_message = errMsg;
+            }
+          }
+        } else {
+          refundResult.success = false;
           refundResult.gateway_error = true;
+          refundResult.refund_id = 'FAILED: No valid Razorpay payment ID found';
+          refundResult.error_message = 'No valid Razorpay payment ID found to refund';
         }
       } else {
         refundResult.refund_id = `rfnd_mock_${Date.now()}`;
@@ -1591,16 +1625,26 @@ async function executeRefundForOrder(order, reason, staffEmail) {
     }
   }
 
+  // Determine payment status outcome
+  let finalPaymentStatus = 'CANCELLED';
+  if (order.payment_status === 'PAID') {
+    if (refundResult.gateway_error) {
+      finalPaymentStatus = 'REFUND_FAILED';
+    } else {
+      finalPaymentStatus = 'REFUNDED';
+    }
+  }
+
   // Update order status in DB
   const updatePayload = {
     order_status: 'CANCELLED',
-    payment_status: order.payment_status === 'PAID' ? 'REFUNDED' : 'CANCELLED',
+    payment_status: finalPaymentStatus,
     updated_at: db.fn.now()
   };
   
   if (refundResult.refund_id) {
     const existingNote = order.delivery_address_note || '';
-    updatePayload.delivery_address_note = `${existingNote} [Refund: ₹${refundAmount.toFixed(2)} via ${order.payment_source} (ID: ${refundResult.refund_id})]`.trim().substring(0, 200);
+    updatePayload.delivery_address_note = `${existingNote} [Refund: ₹${refundAmount.toFixed(2)} via ${order.payment_source} (ID: ${refundResult.refund_id})]`.trim().substring(0, 250);
   }
 
   await db('orders').where({ id: order.id }).update(updatePayload);
@@ -1624,6 +1668,7 @@ async function bulkCancelZone(req, res) {
     const staffEmail = req.staff?.email || 'admin';
     let query = db('orders')
       .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
+      .whereNot('payment_status', 'REFUNDED')
       .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
 
     if (zone !== 'ALL') {
@@ -1634,7 +1679,9 @@ async function bulkCancelZone(req, res) {
     try {
       ordersToCancel = await query;
     } catch(e) {
-      let fallback = db('orders').whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY']);
+      let fallback = db('orders')
+        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
+        .whereNot('payment_status', 'REFUNDED');
       if (zone !== 'ALL') {
         fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
       }
@@ -1681,10 +1728,10 @@ async function cancelOrderWithRefund(req, res) {
       return res.status(404).json({ success: false, message: 'Order not found.' });
     }
 
-    if (['DELIVERED', 'REFUNDED', 'CANCELLED'].includes(order.order_status)) {
+    if (['DELIVERED', 'REFUNDED', 'CANCELLED'].includes(order.order_status) || order.payment_status === 'REFUNDED') {
       return res.status(400).json({
         success: false,
-        message: `Cannot cancel order with status ${order.order_status}.`
+        message: `Order is already ${order.order_status} (Payment: ${order.payment_status}). Cannot cancel again.`
       });
     }
 
