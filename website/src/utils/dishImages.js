@@ -16,6 +16,14 @@ export const DISH_IMAGES = {
   'chicken kari': '/images/food/chicken_kari.webp',
   'vegetable curry': '/images/food/vegetable_curry.webp',
   'veg curry': '/images/food/veg_curry.webp',
+  'veg spice': '/images/food/veg_curry.webp',
+  'vegetable spice': '/images/food/veg_curry.webp',
+  'veg special': '/images/food/veg_curry.webp',
+  'mix veg': '/images/food/veg_curry.webp',
+  'mixed veg': '/images/food/veg_curry.webp',
+  'mix vegetable': '/images/food/veg_curry.webp',
+  'veg sabji': '/images/food/veg_curry.webp',
+  'sabji': '/images/food/veg_curry.webp',
   'paneer curry': '/images/food/paneer_curry.webp',
   'mattar panner': '/images/food/mattar_paneer.webp',
   'special paneer do pyaza': '/images/food/special_paneer_do_pyaza.webp',
@@ -66,6 +74,8 @@ export function getDishImage(item) {
   }
 
   const nameKey = (item?.name || '').toLowerCase().trim();
+  const catKey = (item?.category || '').toLowerCase().trim();
+  const isVeg = item?.is_veg === true || item?.is_veg === 1 || item?.is_veg === '1';
 
   // Exact match
   if (DISH_IMAGES[nameKey]) return DISH_IMAGES[nameKey];
@@ -98,7 +108,21 @@ export function getDishImage(item) {
   if (nameKey.includes('do pyaza')) return DISH_IMAGES['special paneer do pyaza'];
   if (nameKey.includes('paneer curry')) return DISH_IMAGES['paneer curry'];
   if (nameKey.includes('egg kari') || nameKey.includes('egg curry')) return DISH_IMAGES['egg kari'];
-  if (nameKey.includes('vegetable curry') || nameKey.includes('veg curry')) return DISH_IMAGES['vegetable curry'];
+  if (
+    nameKey.includes('vegetable curry') ||
+    nameKey.includes('veg curry') ||
+    nameKey.includes('veg spice') ||
+    nameKey.includes('vegetable spice') ||
+    nameKey.includes('veg special') ||
+    nameKey.includes('mix veg') ||
+    nameKey.includes('mix vegetable') ||
+    nameKey.includes('sabji') ||
+    nameKey.includes('sabzi') ||
+    (nameKey.includes('spice') && isVeg)
+  ) {
+    if (nameKey.includes('paneer')) return DISH_IMAGES['paneer curry'];
+    return DISH_IMAGES['veg curry'];
+  }
 
   if (nameKey.includes('chicken biryani')) {
     return nameKey.includes('outlet') ? DISH_IMAGES['chicken biryani (outlet)'] : DISH_IMAGES['chicken biryani'];
@@ -126,5 +150,25 @@ export function getDishImage(item) {
   if (nameKey.includes('paneer rice')) return DISH_IMAGES['paneer rice'];
   if (nameKey.includes('fried rice')) return DISH_IMAGES['fried rice'];
 
-  return '/images/food/veg_thali.webp';
+  // Smart Category Fallback (NEVER show a Thali for a Curry!)
+  if (catKey === 'curry') {
+    return isVeg ? DISH_IMAGES['veg curry'] : DISH_IMAGES['chicken curry'];
+  }
+  if (catKey === 'thali') {
+    return isVeg ? DISH_IMAGES['veg thali'] : DISH_IMAGES['chicken thali'];
+  }
+  if (catKey === 'biryani') {
+    return isVeg ? DISH_IMAGES['veg biryani'] : DISH_IMAGES['chicken biryani'];
+  }
+  if (catKey === 'breads') {
+    return DISH_IMAGES['tandoori roti'];
+  }
+  if (catKey === 'rolls') {
+    return isVeg ? DISH_IMAGES['veg roll'] : DISH_IMAGES['chicken roll'];
+  }
+  if (catKey === 'rice') {
+    return isVeg ? DISH_IMAGES['fried rice'] : DISH_IMAGES['chicken rice'];
+  }
+
+  return isVeg ? DISH_IMAGES['veg curry'] : DISH_IMAGES['chicken curry'];
 }

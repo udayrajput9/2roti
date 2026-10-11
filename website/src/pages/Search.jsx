@@ -588,7 +588,7 @@ function FoodItemCard({
           decoding="async"
           onError={(e) => {
             // Fallback gracefully to default placeholder
-            e.target.src = '/images/food/veg_thali.webp';
+            e.target.src = isVeg ? '/images/food/veg_curry.webp' : '/images/food/chicken_curry.webp';
           }}
         />
         <div className="absolute top-1.5 left-1.5">

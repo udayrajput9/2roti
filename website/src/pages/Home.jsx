@@ -279,7 +279,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => { e.target.src = '/images/food/veg_thali.webp'; }}
+                      onError={(e) => { e.target.src = isVeg ? '/images/food/veg_curry.webp' : '/images/food/chicken_curry.webp'; }}
                     />
                     <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-amber-500/40 text-[9px] font-black text-amber-300 uppercase flex items-center gap-1">
                       <Flame className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
@@ -590,7 +590,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
                         decoding="async"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
-                          e.target.src = '/images/food/veg_thali.webp';
+                          e.target.src = isVeg ? '/images/food/veg_curry.webp' : '/images/food/chicken_curry.webp';
                         }}
                       />
                     </div>
