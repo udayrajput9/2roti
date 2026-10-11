@@ -153,7 +153,7 @@ export const POLICY_DATA = {
       },
       {
         heading: '3. Delivery Fee Structure',
-        content: `• Free Delivery: Orders meeting or exceeding the minimum basket size of ₹149 qualify for 100% Free Campus Gate Delivery.\n• Nominal Delivery Fee: Orders below ₹149 may incur a nominal campus courier fee of ₹15 – ₹25 depending on the specific campus hostel distance from our central kitchen hub.\nAll applicable delivery fees are transparently shown on the Checkout screen prior to payment authorization.`
+        content: `• Free Delivery: Orders meeting or exceeding the minimum basket size of ₹100 qualify for 100% Free Campus Gate Delivery.\n• Nominal Delivery Fee: Orders below ₹100 incur a flat campus delivery fee of ₹10.\nAll applicable delivery fees are transparently shown on the Checkout screen prior to payment authorization.`
       },
       {
         heading: '4. Hygienic Packaging & Thermal Protection',

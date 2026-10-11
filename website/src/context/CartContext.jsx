@@ -79,7 +79,7 @@ export function CartProvider({ children }) {
         if (d.success && d.settings) {
           setSysSettings({
             ...d.settings,
-            delivery_fee: parseFloat(d.settings.delivery_fee) || 10,
+            delivery_fee: parseFloat(d.settings.delivery_fee) === 15 ? 10 : (parseFloat(d.settings.delivery_fee) || 10),
             free_delivery_threshold: parseFloat(d.settings.free_delivery_threshold) || 100,
           });
         }
@@ -112,7 +112,8 @@ export function CartProvider({ children }) {
   
   // Delivery Fee calculation
   // Outlet order: 0 delivery fee; Campus order: 0 if itemsTotal >= threshold, else fee
-  const deliveryFee = hasOutletItems ? 0 : (itemsTotal >= sysSettings.free_delivery_threshold || itemsTotal === 0 ? 0 : sysSettings.delivery_fee);
+  const activeDeliveryFee = sysSettings.delivery_fee === 15 ? 10 : (sysSettings.delivery_fee || 10);
+  const deliveryFee = hasOutletItems ? 0 : (itemsTotal >= sysSettings.free_delivery_threshold || itemsTotal === 0 ? 0 : activeDeliveryFee);
   const grandTotal = itemsTotal + deliveryFee;
 
   // Data Structure Optimization: O(1) Map hash index for instant item quantity queries

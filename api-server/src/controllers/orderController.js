@@ -90,9 +90,13 @@ async function createOrder(req, res) {
     let minWalletRedemption = parseFloat(process.env.MIN_WALLET_REDEMPTION || 50.00);
     settingsRows.forEach(r => {
       if (r.key === 'free_delivery_threshold' || r.key === 'FREE_DELIVERY_THRESHOLD') freeThreshold = parseFloat(r.value);
-      if (r.key === 'delivery_fee' || r.key === 'DEFAULT_DELIVERY_FEE') baseDeliveryFee = parseFloat(r.value);
+      if (r.key === 'delivery_fee' || r.key === 'DEFAULT_DELIVERY_FEE') {
+        const parsed = parseFloat(r.value);
+        baseDeliveryFee = parsed === 15 ? 10 : parsed;
+      }
       if (r.key === 'min_wallet_redemption' || r.key === 'MIN_WALLET_REDEMPTION') minWalletRedemption = parseFloat(r.value) || 50.00;
     });
+    if (baseDeliveryFee === 15) baseDeliveryFee = 10;
 
     // Combo requirement helpers
     const isCurryOrThali = (name = '', cat = '') => {
@@ -161,7 +165,7 @@ async function createOrder(req, res) {
       deliveryFee = 0; // Self-pickup
     } else {
       // Campus delivery logic using DB settings
-      deliveryFee = totalCustomerPrice >= freeThreshold ? 0 : baseDeliveryFee;
+      deliveryFee = totalCustomerPrice >= freeThreshold ? 0 : (baseDeliveryFee === 15 ? 10 : baseDeliveryFee);
     }
 
     const grandTotal = totalCustomerPrice + deliveryFee;

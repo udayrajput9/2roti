@@ -129,11 +129,19 @@ async function getPublicSettings(req, res) {
     });
 
     // Alias mapping for compatibility between DEFAULT_DELIVERY_FEE and delivery_fee
-    if (settings.DEFAULT_DELIVERY_FEE && (!settings.delivery_fee || settings.delivery_fee === '15')) {
+    if (settings.DEFAULT_DELIVERY_FEE && (!settings.delivery_fee || settings.delivery_fee === '15' || settings.delivery_fee === '15.00')) {
       settings.delivery_fee = String(parseFloat(settings.DEFAULT_DELIVERY_FEE));
     }
     if (settings.FREE_DELIVERY_THRESHOLD && !settings.free_delivery_threshold) {
       settings.free_delivery_threshold = String(parseFloat(settings.FREE_DELIVERY_THRESHOLD));
+    }
+
+    // Strictly enforce 10 if fee is 15
+    if (settings.delivery_fee === '15' || settings.delivery_fee === '15.00' || settings.delivery_fee === 15 || !settings.delivery_fee) {
+      settings.delivery_fee = '10';
+    }
+    if (settings.DEFAULT_DELIVERY_FEE === '15' || settings.DEFAULT_DELIVERY_FEE === '15.00' || settings.DEFAULT_DELIVERY_FEE === 15) {
+      settings.DEFAULT_DELIVERY_FEE = '10';
     }
     return res.json({ success: true, settings });
   } catch (err) {
