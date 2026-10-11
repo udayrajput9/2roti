@@ -537,8 +537,13 @@ async function getReceipt(req, res) {
     }
     const items = await db('order_items').where({ order_id: id });
 
-    // Generate QR Code containing the order_token
-    const qrDataUrl = await QRCode.toDataURL(order.order_token, {
+    // Generate QR Code containing token, secret OTP, and customer name
+    const qrPayload = JSON.stringify({
+      token: order.order_token,
+      secret: order.delivery_otp,
+      customer: order.customer_name
+    });
+    const qrDataUrl = await QRCode.toDataURL(qrPayload, {
       width: 150,
       margin: 2,
       color: { dark: '#000000', light: '#ffffff' }
@@ -615,8 +620,11 @@ async function getReceipt(req, res) {
 
           <div class="center bold" style="font-size: 14px; margin-top: 15px;">SCAN TO DELIVER</div>
           <img src="${qrDataUrl}" alt="QR Code" class="qr-code" />
+          <div class="center bold" style="font-size: 15px; margin-top: 5px;">${order.customer_name}</div>
+          <div class="center bold" style="font-size: 13px; color: #FF5722; margin-top: 2px;">Order ID: ${order.order_token}</div>
+          ${order.delivery_otp ? `<div class="center bold" style="font-size: 13px; color: #111; margin-top: 3px; letter-spacing: 2px;">SECRET CODE: ${order.delivery_otp}</div>` : ''}
           
-          <div class="center" style="font-size: 12px;">Thank you for ordering!</div>
+          <div class="center" style="font-size: 12px; margin-top: 10px;">Thank you for ordering!</div>
           
           <button class="print-btn" onclick="window.print()">Print Receipt</button>
         </div>
@@ -657,7 +665,12 @@ async function getBulkReceipt(req, res) {
 
     for (const order of orders) {
       const orderItems = itemsByOrderMap.get(order.id) || [];
-      const qrDataUrl = await QRCode.toDataURL(order.order_token, {
+      const qrPayload = JSON.stringify({
+        token: order.order_token,
+        secret: order.delivery_otp,
+        customer: order.customer_name
+      });
+      const qrDataUrl = await QRCode.toDataURL(qrPayload, {
         width: 150,
         margin: 2,
         color: { dark: '#000000', light: '#ffffff' }
@@ -714,8 +727,11 @@ async function getBulkReceipt(req, res) {
 
           <div class="center bold" style="font-size: 14px; margin-top: 15px;">SCAN TO DELIVER</div>
           <img src="${qrDataUrl}" alt="QR Code" class="qr-code" />
+          <div class="center bold" style="font-size: 15px; margin-top: 5px;">${order.customer_name}</div>
+          <div class="center bold" style="font-size: 13px; color: #FF5722; margin-top: 2px;">Order ID: ${order.order_token}</div>
+          ${order.delivery_otp ? `<div class="center bold" style="font-size: 13px; color: #111; margin-top: 3px; letter-spacing: 2px;">SECRET CODE: ${order.delivery_otp}</div>` : ''}
           
-          <div class="center" style="font-size: 12px;">Thank you for ordering!</div>
+          <div class="center" style="font-size: 11px; color: #666; margin-top: 10px;">Campus gate delivery at 8:00 PM</div>
         </div>
       `;
     }
@@ -770,9 +786,9 @@ async function getDailyZonePdf(req, res) {
     const startOfIstToday = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0) - istOffset);
 
     let query = db('orders')
-      .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
+      .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'])
       .where('created_at', '>=', startOfIstToday.toISOString())
-      .whereILike('location_name', `%${zone}%`);
+      .whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%']);
 
     const orders = await query.orderBy('created_at', 'asc');
     if (orders.length === 0) {
@@ -793,7 +809,12 @@ async function getDailyZonePdf(req, res) {
 
     for (const order of orders) {
       const orderItems = itemsByOrderMap.get(order.id) || [];
-      const qrDataUrl = await QRCode.toDataURL(order.order_token, {
+      const qrPayload = JSON.stringify({
+        token: order.order_token,
+        secret: order.delivery_otp,
+        customer: order.customer_name
+      });
+      const qrDataUrl = await QRCode.toDataURL(qrPayload, {
         width: 150,
         margin: 2,
         color: { dark: '#000000', light: '#ffffff' }
@@ -856,8 +877,11 @@ async function getDailyZonePdf(req, res) {
 
           <div class="center bold" style="font-size: 14px; margin-top: 15px;">SCAN TO DELIVER</div>
           <img src="${qrDataUrl}" alt="QR Code" class="qr-code" />
+          <div class="center bold" style="font-size: 15px; margin-top: 5px;">${order.customer_name}</div>
+          <div class="center bold" style="font-size: 13px; color: #FF5722; margin-top: 2px;">Order ID: ${order.order_token}</div>
+          ${order.delivery_otp ? `<div class="center bold" style="font-size: 13px; color: #111; margin-top: 3px; letter-spacing: 2px;">SECRET CODE: ${order.delivery_otp}</div>` : ''}
           
-          <div class="center" style="font-size: 12px;">Thank you for ordering!</div>
+          <div class="center" style="font-size: 11px; color: #666; margin-top: 10px;">Campus gate delivery at 8:00 PM</div>
         </div>
       `;
     }

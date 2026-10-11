@@ -83,11 +83,13 @@ export default function ProfilePage({
   useEffect(() => {
     if (isAuthenticated) {
       fetchOrders();
+      const interval = setInterval(fetchOrders, 4000);
       if (user) {
         setEditName(user.name || '');
         setEditEmail(user.email || '');
         setEditLocationId(user.default_location_id || (locations[0]?.id || ''));
       }
+      return () => clearInterval(interval);
     }
   }, [isAuthenticated, user]);
 
@@ -717,14 +719,22 @@ export default function ProfilePage({
                         </span>
                         <div className="p-2 bg-white rounded-xl shadow-md inline-block">
                           <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(order.order_token)}`}
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(JSON.stringify({ token: order.order_token, secret: order.delivery_otp, customer: order.customer_name }))}`}
                             alt="Delivery QR"
                             className="w-36 h-36 sm:w-44 sm:h-44 object-contain"
                           />
                         </div>
-                        <p className="text-[10px] text-neutral-400 font-medium">
-                          Scan to confirm drop-off • Order Token: <strong className="text-white">{order.order_token}</strong>
-                        </p>
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-black text-white">{order.customer_name}</div>
+                          <p className="text-[10px] text-neutral-400 font-medium">
+                            Token: <strong className="text-[#FF7043]">{order.order_token}</strong>
+                          </p>
+                          {order.delivery_otp && (
+                            <div className="text-[11px] font-mono font-bold text-amber-400">
+                              Secret Code: {order.delivery_otp}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
 

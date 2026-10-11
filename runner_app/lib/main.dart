@@ -91,12 +91,27 @@ class _ScannerScreenState extends State<ScannerScreen> {
       if (code != null && code.isNotEmpty) {
         setState(() => isProcessing = true);
         cameraController.stop();
+
+        String token = code;
+        String? secretOtp;
+        String? custName;
+
+        try {
+          if (code.startsWith('{')) {
+            final parsed = jsonDecode(code);
+            token = parsed['token']?.toString() ?? token;
+            secretOtp = parsed['secret']?.toString() ?? parsed['otp']?.toString();
+            custName = parsed['customer']?.toString();
+          }
+        } catch (_) {}
         
         await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => OrderVerifyScreen(
-              orderToken: code,
+              orderToken: token,
+              initialOtp: secretOtp,
+              scannedCustomerName: custName,
               cameraController: cameraController,
             ),
           ),
@@ -388,11 +403,15 @@ class _ZoneListScreenState extends State<ZoneListScreen> {
 // -------------------------------------------------------------
 class OrderVerifyScreen extends StatefulWidget {
   final String orderToken;
+  final String? initialOtp;
+  final String? scannedCustomerName;
   final MobileScannerController? cameraController;
 
   const OrderVerifyScreen({
     super.key,
     required this.orderToken,
+    this.initialOtp,
+    this.scannedCustomerName,
     this.cameraController,
   });
 
@@ -410,6 +429,9 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialOtp != null && widget.initialOtp!.isNotEmpty) {
+      otpController.text = widget.initialOtp!;
+    }
     fetchOrderDetails();
   }
 
@@ -633,7 +655,38 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
                 ),
               )
             else ...[
-              const Text('Ask Customer for 4-Digit OTP:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              if (widget.initialOtp != null && widget.initialOtp!.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade950.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.amber.shade600),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'QR SECRET CODE DETECTED',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.amberAccent, letterSpacing: 1.2),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.initialOtp!,
+                        style: const TextStyle(fontSize: 32, fontWeight: FontWeight.black, color: Colors.white, letterSpacing: 8),
+                      ),
+                      if (widget.scannedCustomerName != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Customer: ${widget.scannedCustomerName}',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white70),
+                        ),
+                      ]
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              const Text('4-Digit Delivery OTP:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 10),
               TextField(
                 controller: otpController,
