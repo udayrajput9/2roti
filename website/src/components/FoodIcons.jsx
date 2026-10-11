@@ -595,3 +595,27 @@ export function NavProfileIcon({ className = "w-5 h-5", active = false }) {
     </svg>
   );
 }
+
+export function NavChatIcon({ className = "w-5 h-5", active = false }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M21 11.5C21 15.5 17.5 19 12.5 19C11.1 19 9.8 18.7 8.7 18.2L3.5 20L5 15.2C4.3 14.1 4 12.8 4 11.5C4 7.5 7.5 4 12.5 4C17.5 4 21 7.5 21 11.5Z"
+        fill={active ? "url(#navChatGrad)" : "none"}
+        stroke={active ? "#FF5722" : "currentColor"}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="8.5" cy="11.5" r="1.2" fill={active ? "#FFF" : "currentColor"} />
+      <circle cx="12.5" cy="11.5" r="1.2" fill={active ? "#FFF" : "currentColor"} />
+      <circle cx="16.5" cy="11.5" r="1.2" fill={active ? "#FFF" : "currentColor"} />
+      <defs>
+        <linearGradient id="navChatGrad" x1="4" y1="4" x2="21" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FF7043" />
+          <stop offset="100%" stopColor="#C62828" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}

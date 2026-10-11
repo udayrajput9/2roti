@@ -8,7 +8,8 @@ import {
   Search,
   Store,
   Sparkles,
-  Check
+  Check,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -45,6 +46,7 @@ export default function Header({
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'search', label: 'Search', icon: Search },
+    { id: 'chat', label: 'Support', icon: MessageSquare },
     { id: 'profile', label: 'Profile', icon: UserIcon }
   ];
 

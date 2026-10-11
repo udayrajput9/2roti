@@ -22,7 +22,8 @@ import {
   CheckCircle2,
   PackageCheck,
   ListOrdered,
-  Sparkles
+  Sparkles,
+  MessageSquare
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useLiveOrders } from '../context/LiveOrderContext';
@@ -115,6 +116,13 @@ export default function Sidebar({ activeTab, onSelectTab }) {
       highlight: true
     },
     {
+      id: 'support_chat',
+      label: 'Customer Support Chat',
+      icon: MessageSquare,
+      roles: ['SUPER_ADMIN', 'SUPPORT_ADMIN', 'ORDER_MANAGER'],
+      highlight: true
+    },
+    {
       id: 'menu_management',
       label: 'Menu & Inventory',
       icon: Utensils,
@@ -177,6 +185,8 @@ export default function Sidebar({ activeTab, onSelectTab }) {
       ? 'bg-purple-950 text-purple-300 border-purple-800'
       : staff?.role === 'ORDER_MANAGER'
       ? 'bg-blue-950 text-blue-300 border-blue-800'
+      : staff?.role === 'SUPPORT_ADMIN'
+      ? 'bg-amber-950 text-amber-300 border-amber-800'
       : 'bg-emerald-950 text-emerald-300 border-emerald-800';
 
   return (

@@ -10,6 +10,7 @@ import Home from './pages/Home';
 import SearchPage from './pages/Search';
 import ProfilePage from './pages/Profile';
 import CheckoutPage from './pages/Checkout';
+import ChatPage from './pages/Chat';
 import LegalPolicyPage from './pages/LegalPolicyPage';
 
 import Footer from './components/Footer';
@@ -36,7 +37,7 @@ function WebsiteContent() {
     const tab = initialParams.get('tab');
     if (tab) {
       const lower = tab.toLowerCase();
-      if (['home', 'search', 'profile', 'checkout'].includes(lower)) {
+      if (['home', 'search', 'chat', 'profile', 'checkout'].includes(lower)) {
         return lower;
       }
       if (LEGAL_TABS.includes(lower)) {
@@ -253,6 +254,13 @@ function WebsiteContent() {
             onOpenAuth={() => setIsAuthOpen(true)}
             onNavigateToTab={(t) => handleTabChange(t)}
             onOpenCart={() => setIsCartOpen(true)}
+          />
+        )}
+
+        {activeTab === 'chat' && (
+          <ChatPage
+            onOpenAuth={() => setIsAuthOpen(true)}
+            onNavigateToTab={(t) => handleTabChange(t)}
           />
         )}
 

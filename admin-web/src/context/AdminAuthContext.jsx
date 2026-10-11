@@ -55,6 +55,7 @@ export function AdminAuthProvider({ children }) {
         isSuperAdmin: staff?.role === 'SUPER_ADMIN',
         isOrderManager: staff?.role === 'ORDER_MANAGER',
         isVendor: staff?.role === 'VENDOR',
+        isSupportAdmin: staff?.role === 'SUPPORT_ADMIN',
         loginStaff,
         logout
       }}

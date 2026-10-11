@@ -83,7 +83,6 @@ export default function ProfilePage({
   useEffect(() => {
     if (isAuthenticated) {
       fetchOrders();
-      fetchWallet();
       if (user) {
         setEditName(user.name || '');
         setEditEmail(user.email || '');
@@ -238,13 +237,20 @@ export default function ProfilePage({
     );
   }
 
-  const walletBalance = parseFloat(user?.wallet_balance || walletData?.wallet_balance || 0);
-  const milestoneTarget = 50.00;
-  const milestonePercent = Math.min(100, (walletBalance / milestoneTarget) * 100);
-  const amountNeeded = Math.max(0, milestoneTarget - walletBalance);
+  // Filtered Orders - exclude delivered/cancelled orders older than 1 day (24 hours)
+  const isOlderThanOneDay = (dateStr) => {
+    if (!dateStr) return false;
+    const orderTime = new Date(dateStr).getTime();
+    const now = Date.now();
+    return (now - orderTime) > (24 * 60 * 60 * 1000);
+  };
 
-  // Filtered Orders
   const filteredOrders = orders.filter(order => {
+    const isCompleted = ['DELIVERED', 'CANCELLED', 'REFUNDED'].includes(order.order_status);
+    if (isCompleted && isOlderThanOneDay(order.created_at)) {
+      return false;
+    }
+
     if (orderFilter === 'ALL') return true;
     if (orderFilter === 'ACTIVE') {
       return ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'].includes(order.order_status);
@@ -359,24 +365,20 @@ export default function ProfilePage({
         </div>
 
         {/* Quick Metric Bar */}
-        <div className="grid grid-cols-3 gap-2 mt-4 pt-3.5 border-t border-neutral-800/80">
+        <div className="grid grid-cols-2 gap-2 mt-4 pt-3.5 border-t border-neutral-800/80">
           <div className="bg-[#181818] border border-neutral-800/80 rounded-2xl p-2.5 text-center">
             <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Total Orders</div>
             <div className="text-base sm:text-lg font-black text-white mt-0.5">{orders.length}</div>
           </div>
           <div className="bg-[#181818] border border-neutral-800/80 rounded-2xl p-2.5 text-center">
-            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Wallet Balance</div>
-            <div className="text-base sm:text-lg font-black text-[#FF7043] mt-0.5">₹{walletBalance.toFixed(2)}</div>
-          </div>
-          <div className="bg-[#181818] border border-neutral-800/80 rounded-2xl p-2.5 text-center">
-            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Loyalty Perks</div>
-            <div className="text-base sm:text-lg font-black text-amber-400 mt-0.5">₹3 / Order</div>
+            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Campus Gate</div>
+            <div className="text-base sm:text-lg font-black text-[#FF7043] mt-0.5 truncate">{userCampusName}</div>
           </div>
         </div>
       </div>
 
       {/* 2. Top-Level Tab Navigator */}
-      <div className="grid grid-cols-4 gap-1.5 bg-[#121212] p-1.5 rounded-2xl border border-neutral-800 shadow-inner">
+      <div className="grid grid-cols-3 gap-1.5 bg-[#121212] p-1.5 rounded-2xl border border-neutral-800 shadow-inner">
         <button
           onClick={() => setActiveTab('ORDERS')}
           className={`py-2 px-1 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
@@ -387,19 +389,7 @@ export default function ProfilePage({
         >
           <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
           <span className="hidden xs:inline">Orders</span>
-          <span className="text-[10px] opacity-80">({orders.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('WALLET')}
-          className={`py-2 px-1 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
-            activeTab === 'WALLET'
-              ? 'bg-gradient-to-r from-[#FF5722] to-[#E64A19] text-white shadow-[0_4px_12px_rgba(255,87,34,0.35)]'
-              : 'text-neutral-400 hover:text-white hover:bg-neutral-800/60'
-          }`}
-        >
-          <WalletIcon className="w-3.5 h-3.5 shrink-0" />
-          <span>Wallet</span>
+          <span className="text-[10px] opacity-80">({filteredOrders.length})</span>
         </button>
 
         <button
@@ -746,157 +736,7 @@ export default function ProfilePage({
         </div>
       )}
 
-      {/* 4. TAB 2: LOYALTY WALLET & CASHBACK LEDGER */}
-      {activeTab === 'WALLET' && (
-        <div className="space-y-4">
-          
-          {/* Main Gold Card */}
-          <div className="bg-gradient-to-br from-[#1F150E] via-[#16120E] to-[#120F0D] border border-[#FF5722]/60 rounded-3xl p-5 shadow-[0_12px_36px_rgba(255,87,34,0.22)] relative overflow-hidden">
-            {/* Background sparkle & circles */}
-            <div className="absolute top-0 right-0 w-48 h-48 bg-[#FF5722]/15 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-1.5 text-xs font-black text-amber-400 uppercase tracking-wider">
-                  <Award className="w-4 h-4" />
-                  <span>2 Roti Loyalty Wallet</span>
-                </div>
-                <div className="text-3xl sm:text-4xl font-black text-white mt-1.5 flex items-baseline gap-1">
-                  <span>₹{walletBalance.toFixed(2)}</span>
-                  <span className="text-xs text-neutral-400 font-bold">Total Available</span>
-                </div>
-              </div>
-
-              <span className="px-3 py-1 rounded-full bg-[#FF5722]/20 border border-[#FF5722]/40 text-[#FF7043] text-[11px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
-                <Zap className="w-3.5 h-3.5 text-amber-400" />
-                <span>₹3 Cashback / Order</span>
-              </span>
-            </div>
-
-            {/* Gamified Milestone Progress Bar */}
-            <div className="mt-4 pt-3.5 border-t border-neutral-800/80 space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-neutral-300 flex items-center gap-1">
-                  <Flame className="w-3.5 h-3.5 text-[#FF5722]" />
-                  <span>₹50 Free Food Redemption Milestone</span>
-                </span>
-                <span className="text-amber-400 font-black">{milestonePercent.toFixed(0)}%</span>
-              </div>
-
-              <div className="w-full bg-neutral-900 h-2.5 rounded-full overflow-hidden p-0.5 border border-neutral-800 flex">
-                <div
-                  className="bg-gradient-to-r from-amber-500 via-[#FF7043] to-[#FF5722] h-full rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(255,87,34,0.6)]"
-                  style={{ width: `${milestonePercent}%` }}
-                />
-              </div>
-
-              <p className="text-[11px] text-neutral-400 leading-relaxed font-medium">
-                {walletBalance >= 50.00 ? (
-                  <span className="text-emerald-400 font-bold flex items-center gap-1 mt-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Congratulations! You can pay 100% of your meal total with this wallet balance!
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1.5 mt-1">
-                    <CashbackCoinIcon className="w-3.5 h-3.5 shrink-0" />
-                    <span>Earn ₹{amountNeeded.toFixed(2)} more cashback to unlock <strong>100% Free Food Redemption</strong> on your next meal!</span>
-                  </span>
-                )}
-              </p>
-            </div>
-
-            {/* Quick student info box */}
-            <div className="mt-3 bg-[#130E0A]/90 border border-amber-900/30 rounded-2xl p-3 text-[11px] text-amber-200/90 leading-relaxed flex items-start gap-2">
-              <CashbackCoinIcon className="w-4 h-4 shrink-0 mt-0.5" />
-              <span><strong>How Student Cashback works:</strong> Every time your meal is delivered to your hostel gate, ₹3 is automatically added to your wallet. You can redeem it 100% on any food order once your wallet reaches ₹50!</span>
-            </div>
-          </div>
-
-          {/* Wallet Ledger Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <h2 className="text-xs font-black uppercase tracking-wider text-neutral-400">
-                Wallet Activity & Passbook
-              </h2>
-
-              {/* Filter Pills */}
-              <div className="flex items-center gap-1">
-                {[
-                  { id: 'ALL', label: 'All' },
-                  { id: 'CREDIT', label: 'Credits (+)' },
-                  { id: 'DEBIT', label: 'Spends (-)' }
-                ].map(f => (
-                  <button
-                    key={f.id}
-                    onClick={() => setWalletFilter(f.id)}
-                    className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                      walletFilter === f.id
-                        ? 'bg-neutral-200 text-neutral-900'
-                        : 'bg-[#181818] text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {filteredTransactions.length === 0 ? (
-              <div className="text-center py-12 bg-[#121212] rounded-3xl border border-neutral-800/80 text-neutral-500">
-                <WalletIcon className="w-10 h-10 mx-auto mb-2 opacity-30 stroke-1" />
-                <p className="text-xs font-bold text-neutral-300">No transactions found in this ledger.</p>
-                <p className="text-[11px] text-neutral-500 mt-0.5">Order now to receive ₹3 cashback per delivery!</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredTransactions.map((tx) => {
-                  const isCredit = tx.type === 'CREDIT' || tx.type === 'cashback_credit' || tx.type === 'order_refund_credit';
-                  return (
-                    <div
-                      key={tx.id}
-                      className="bg-[#121212] border border-neutral-800/90 rounded-2xl p-3.5 flex items-center justify-between shadow-sm hover:border-neutral-700 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2.5 rounded-xl shrink-0 ${isCredit ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/60' : 'bg-rose-950/80 text-rose-400 border border-rose-800/60'}`}>
-                          {isCredit ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
-                        </div>
-                        <div>
-                          <div className="text-xs font-black text-white">
-                            {tx.note || tx.description || (isCredit ? 'Order Delivery Cashback' : 'Redeemed on Food Order')}
-                          </div>
-                          <span className="text-[10px] text-neutral-500 font-medium">
-                            {new Date(tx.created_at).toLocaleDateString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className={`text-xs sm:text-sm font-black ${isCredit ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {isCredit ? '+' : '-'}₹{parseFloat(tx.amount).toFixed(2)}
-                        </div>
-                        {tx.balance_after !== undefined && (
-                          <span className="text-[9px] text-neutral-500 font-medium">
-                            Bal: ₹{parseFloat(tx.balance_after).toFixed(2)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-        </div>
-      )}
-
-      {/* 5. TAB 3: CAMPUS DELIVERY & ADDRESSES */}
+      {/* 5. TAB 2: CAMPUS DELIVERY & ADDRESSES */}
       {activeTab === 'ADDRESS' && (
         <div className="space-y-4">
           <div className="bg-[#121212] border border-neutral-800/90 rounded-3xl p-5 shadow-lg space-y-4">

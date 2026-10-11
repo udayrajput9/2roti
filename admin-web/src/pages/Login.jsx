@@ -96,7 +96,7 @@ export default function Login() {
             Role Preset Quick Logins:
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <button
               type="button"
               onClick={() => setDemoRole('admin@2roti.com', 'Admin@2Roti2026')}
@@ -110,6 +110,13 @@ export default function Login() {
               className="p-2 rounded-xl bg-blue-950/60 border border-blue-800 hover:bg-blue-900/60 text-[10px] font-bold text-blue-300 text-center transition-colors"
             >
               Order Manager
+            </button>
+            <button
+              type="button"
+              onClick={() => setDemoRole('support@2roti.com', 'Support@2Roti2026')}
+              className="p-2 rounded-xl bg-amber-950/60 border border-amber-800 hover:bg-amber-900/60 text-[10px] font-bold text-amber-300 text-center transition-colors"
+            >
+              Chat Support
             </button>
             <button
               type="button"

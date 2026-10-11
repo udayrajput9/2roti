@@ -11,6 +11,7 @@ import Refunds from './pages/Refunds';
 import StaffRBAC from './pages/StaffRBAC';
 import SecurityAudit from './pages/SecurityAudit';
 import SystemSettings from './pages/SystemSettings';
+import SupportChat from './pages/SupportChat';
 import Login from './pages/Login';
 
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
@@ -25,6 +26,8 @@ function ERPContent() {
       setActiveTab('live_orders_active');
     } else if (staff?.role === 'ORDER_MANAGER') {
       setActiveTab('live_orders_active');
+    } else if (staff?.role === 'SUPPORT_ADMIN') {
+      setActiveTab('support_chat');
     } else {
       setActiveTab('dashboard');
     }
@@ -55,6 +58,7 @@ function ERPContent() {
           {(activeTab === 'live_orders' || activeTab?.startsWith('live_orders_')) && (
             <LiveOrders activeTab={activeTab} onSelectTab={setActiveTab} />
           )}
+          {activeTab === 'support_chat' && <SupportChat />}
           {(activeTab === 'menu_management' || activeTab === 'menu_upload') && <MenuManagement />}
           {activeTab === 'locations' && <CampusLocations />}
           {activeTab === 'customers' && <CustomerDirectory />}

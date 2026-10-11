@@ -1,6 +1,49 @@
 const db = require('../config/database');
 
+async function ensureOrderChatsTable() {
+  try {
+    const hasTable = await db.schema.hasTable('order_chats');
+    if (!hasTable) {
+      await db.schema.createTable('order_chats', (table) => {
+        table.increments('id').primary();
+        table.integer('order_id').references('id').inTable('orders').onDelete('CASCADE');
+        table.string('order_token').notNullable();
+        table.integer('user_id').references('id').inTable('users').onDelete('CASCADE');
+        table.string('sender_type').notNullable(); // CUSTOMER or ADMIN
+        table.string('sender_name').notNullable();
+        table.text('message').notNullable();
+        table.timestamp('created_at').defaultTo(db.fn.now());
+      });
+      await db.raw('CREATE INDEX IF NOT EXISTS idx_order_chats_order_id ON order_chats(order_id)');
+      await db.raw('CREATE INDEX IF NOT EXISTS idx_order_chats_user_id ON order_chats(user_id)');
+      await db.raw('CREATE INDEX IF NOT EXISTS idx_order_chats_created_at ON order_chats(created_at)');
+    }
+
+    const hasStaffTable = await db.schema.hasTable('staff_users');
+    if (hasStaffTable) {
+      const supportUser = await db('staff_users').where({ email: 'support@2roti.com' }).first();
+      if (!supportUser) {
+        const bcrypt = require('bcryptjs');
+        const supportHash = await bcrypt.hash('Support@2Roti2026', 10);
+        await db('staff_users').insert({
+          name: 'Campus Support Agent',
+          email: 'support@2roti.com',
+          phone: '9876543213',
+          password_hash: supportHash,
+          role: 'SUPPORT_ADMIN',
+          outlet_location_id: null,
+          is_active: true
+        });
+        console.log('✅ Default Support Agent account seeded.');
+      }
+    }
+  } catch (err) {
+    console.warn('ensureOrderChatsTable check warning:', err.message);
+  }
+}
+
 async function initSchema() {
+  await ensureOrderChatsTable();
   // Fast-path: If core tables already exist, skip redundant DDL checks for ultra-fast startup (<100ms)
   try {
     const hasCore = await db.schema.hasTable('menu_items');

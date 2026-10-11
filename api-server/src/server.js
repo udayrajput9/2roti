@@ -18,6 +18,7 @@ const walletRoutes = require('./routes/walletRoutes');
 const vendorRoutes = require('./routes/vendorRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const securityRoutes = require('./routes/securityRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -65,6 +66,7 @@ app.use('/api/vendor', vendorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/runner', require('./routes/runnerRoutes'));
+app.use('/api/chat', chatRoutes);
 
 // Public Settings Route
 app.get('/api/settings', require('./controllers/statsController').getPublicSettings);

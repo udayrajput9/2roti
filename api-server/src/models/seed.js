@@ -55,6 +55,15 @@ async function seed() {
       role: 'VENDOR',
       outlet_location_id: jhungiyaLoc ? jhungiyaLoc.id : null,
       is_active: true
+    },
+    {
+      name: 'Campus Support Agent',
+      email: 'support@2roti.com',
+      phone: '9876543213',
+      password_hash: await bcrypt.hash('Support@2Roti2026', 10),
+      role: 'SUPPORT_ADMIN',
+      outlet_location_id: null,
+      is_active: true
     }
   ];
 

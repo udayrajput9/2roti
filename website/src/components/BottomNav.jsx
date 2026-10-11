@@ -1,10 +1,11 @@
 import React from 'react';
-import { NavHomeIcon, NavSearchIcon, NavProfileIcon } from './FoodIcons';
+import { NavHomeIcon, NavSearchIcon, NavChatIcon, NavProfileIcon } from './FoodIcons';
 
 export default function BottomNav({ activeTab, onChangeTab }) {
   const navItems = [
     { id: 'home', label: 'Home', icon: NavHomeIcon },
     { id: 'search', label: 'Search', icon: NavSearchIcon },
+    { id: 'chat', label: 'Chat', icon: NavChatIcon },
     { id: 'profile', label: 'Profile', icon: NavProfileIcon }
   ];
 
