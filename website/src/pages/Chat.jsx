@@ -306,6 +306,30 @@ export default function ChatPage({ onOpenAuth, onNavigateToTab }) {
           </div>
         </div>
 
+        {/* Quick Delivery QR One-Click Banner */}
+        {selectedOrder && selectedOrder.order_status !== 'DELIVERED' && (
+          <div className="px-3 py-2 bg-gradient-to-r from-amber-950/70 via-neutral-900 to-amber-950/70 border-b border-amber-500/25 flex items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
+                <QrCode className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-[11px] leading-tight">
+                <span className="font-bold text-white">Delivery Agent asking for QR?</span>
+                <span className="text-amber-300/80 block text-[10px]">Tap to send your gate delivery verification QR</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleShareDeliveryQr}
+              disabled={sending}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black text-[11px] shadow-sm flex items-center gap-1 active:scale-95 transition-all shrink-0"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              <span>Send QR Code</span>
+            </button>
+          </div>
+        )}
+
         {/* Messages Stream */}
         <div className="flex-1 p-4 overflow-y-auto space-y-3 min-h-0">
           <div className="text-center my-1">
@@ -382,6 +406,23 @@ export default function ChatPage({ onOpenAuth, onNavigateToTab }) {
                       <div className="px-1.5 py-0.5">{msg.message}</div>
                     )}
                   </div>
+                  {!isMine && (msg.message.toLowerCase().includes('qr') || msg.message.toLowerCase().includes('otp') || msg.message.toLowerCase().includes('agent')) && selectedOrder?.order_status !== 'DELIVERED' && (
+                    <div className="mt-1.5 p-2 bg-gradient-to-r from-amber-950/80 to-orange-950/80 border border-amber-500/50 rounded-2xl flex items-center justify-between gap-3 max-w-[85%] shadow-md">
+                      <div className="flex items-center gap-1.5 text-[11px] text-amber-200 font-bold">
+                        <QrCode className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Agent requested Delivery QR</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleShareDeliveryQr}
+                        disabled={sending}
+                        className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 text-black font-black text-[10px] flex items-center gap-1 active:scale-95 transition-all shadow-sm shrink-0"
+                      >
+                        <QrCode className="w-3 h-3" />
+                        <span>Click to Send</span>
+                      </button>
+                    </div>
+                  )}
                   <span className="text-[9px] text-neutral-500 mt-1 px-1">
                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
