@@ -635,6 +635,28 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
                       color: order['payment_status'] == 'PAID' ? Colors.green : Colors.orange,
                     ),
                   ),
+                  const Divider(height: 30),
+                  Text('Order Items:', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                  const SizedBox(height: 8),
+                  if (order['items'] != null && (order['items'] as List).isNotEmpty)
+                    ...((order['items'] as List).map((it) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${it['quantity']}x ${it['item_name']}',
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
+                              ),
+                              Text(
+                                '₹${it['customer_price']}',
+                                style: const TextStyle(fontSize: 14, color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        )))
+                  else
+                    const Text('No items found', style: TextStyle(color: Colors.grey)),
                 ],
               ),
             ),

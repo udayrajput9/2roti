@@ -786,7 +786,7 @@ async function getDailyZonePdf(req, res) {
     const startOfIstToday = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0) - istOffset);
 
     let query = db('orders')
-      .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'])
+      .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED'])
       .where('created_at', '>=', startOfIstToday.toISOString())
       .whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%']);
 
