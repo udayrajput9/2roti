@@ -39,17 +39,20 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const ScannerScreen(),
-    const ZoneListScreen(zoneName: 'Buddha'),
-    const ZoneListScreen(zoneName: 'KIPM'),
-    const ZoneListScreen(zoneName: 'ITM'),
+  final List<Widget> _screens = const [
+    ScannerScreen(key: ValueKey('scanner_tab')),
+    ZoneListScreen(key: ValueKey('buddha_tab'), zoneName: 'Buddha'),
+    ZoneListScreen(key: ValueKey('kipm_tab'), zoneName: 'KIPM'),
+    ZoneListScreen(key: ValueKey('itm_tab'), zoneName: 'ITM'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
@@ -170,9 +173,22 @@ class _ZoneListScreenState extends State<ZoneListScreen> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant ZoneListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.zoneName != widget.zoneName) {
+      setState(() {
+        orders = [];
+        isLoading = true;
+      });
+      fetchOrders();
+    }
+  }
+
   Future<void> fetchOrders() async {
     try {
-      final res = await http.get(Uri.parse('$kBaseUrl/api/runner/active-orders'));
+      final zoneEncoded = Uri.encodeComponent(widget.zoneName.trim());
+      final res = await http.get(Uri.parse('$kBaseUrl/api/runner/active-orders?zone=$zoneEncoded'));
       final data = jsonDecode(res.body);
 
       if (res.statusCode == 200 && data['success'] == true) {
@@ -181,10 +197,12 @@ class _ZoneListScreenState extends State<ZoneListScreen> {
         
         setState(() {
           orders = allOrders.where((o) => 
-            o['location_name'].toString().toLowerCase().contains(widget.zoneName.toLowerCase())
+            (o['location_name'] ?? '').toString().toLowerCase().contains(widget.zoneName.toLowerCase())
           ).toList();
           isLoading = false;
         });
+      } else {
+        if (mounted) setState(() => isLoading = false);
       }
     } catch (e) {
       if (mounted) setState(() => isLoading = false);
@@ -437,7 +455,9 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
 
   Future<void> fetchOrderDetails() async {
     try {
-      final res = await http.get(Uri.parse('$kBaseUrl/api/runner/order/${widget.orderToken}'));
+      final cleanToken = widget.orderToken.trim();
+      final encodedToken = Uri.encodeComponent(cleanToken);
+      final res = await http.get(Uri.parse('$kBaseUrl/api/runner/order/$encodedToken?token=$encodedToken'));
       final data = jsonDecode(res.body);
 
       if (res.statusCode == 200 && data['success'] == true) {
@@ -481,10 +501,12 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
     setState(() => isSubmitting = true);
 
     try {
+      final cleanToken = widget.orderToken.trim();
+      final encodedToken = Uri.encodeComponent(cleanToken);
       final res = await http.post(
-        Uri.parse('$kBaseUrl/api/runner/order/${widget.orderToken}/verify-otp'),
+        Uri.parse('$kBaseUrl/api/runner/order/$encodedToken/verify-otp'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'otp': otp}),
+        body: jsonEncode({'otp': otp, 'token': cleanToken}),
       );
       final data = jsonDecode(res.body);
 
