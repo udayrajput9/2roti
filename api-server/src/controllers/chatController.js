@@ -48,9 +48,22 @@ async function getCustomerChatOrders(req, res) {
       .orderBy('created_at', 'desc')
       .limit(20);
 
+    const orderIds = orders.map(o => o.id);
+    const items = await db('order_items').whereIn('order_id', orderIds);
+    const itemsMap = new Map();
+    items.forEach(it => {
+      if (!itemsMap.has(it.order_id)) itemsMap.set(it.order_id, []);
+      itemsMap.get(it.order_id).push(it);
+    });
+
+    const enrichedOrders = orders.map(o => ({
+      ...o,
+      items: itemsMap.get(o.id) || []
+    }));
+
     return res.json({
       success: true,
-      orders
+      orders: enrichedOrders
     });
   } catch (err) {
     console.error('getCustomerChatOrders error:', err);
@@ -73,6 +86,9 @@ async function getOrderMessages(req, res) {
       return res.status(404).json({ success: false, message: 'Order not found or does not belong to you.' });
     }
 
+    const items = await db('order_items').where({ order_id: order.id });
+    order.items = items;
+
     const messages = await db('order_chats')
       .where({ order_id: orderId })
       .where('created_at', '>=', db.raw("NOW() - INTERVAL '4 days'"))
@@ -87,8 +103,12 @@ async function getOrderMessages(req, res) {
         delivery_otp: order.delivery_otp,
         order_status: order.order_status,
         total_customer_price: order.total_customer_price,
+        delivery_fee: order.delivery_fee,
         location_name: order.location_name,
-        created_at: order.created_at
+        assigned_runner_name: order.assigned_runner_name,
+        assigned_runner_phone: order.assigned_runner_phone,
+        created_at: order.created_at,
+        items: items
       },
       messages
     });

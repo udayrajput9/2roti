@@ -273,6 +273,11 @@ export default function ChatPage({ onOpenAuth, onNavigateToTab }) {
                   <div className="text-[10px] text-neutral-400 mt-0.5">
                     ₹{parseFloat(ord.total_customer_price || 0).toFixed(0)} • {ord.location_name}
                   </div>
+                  {ord.items && ord.items.length > 0 && (
+                    <div className="text-[10px] text-[#FF7043] font-medium truncate max-w-[190px] mt-0.5">
+                      {ord.items.map(it => `${it.quantity}x ${it.item_name}`).join(', ')}
+                    </div>
+                  )}
                 </div>
               </button>
             );
@@ -306,6 +311,37 @@ export default function ChatPage({ onOpenAuth, onNavigateToTab }) {
           </div>
         </div>
 
+        {/* Order Food Content Summary Bar */}
+        {selectedOrder && selectedOrder.items && selectedOrder.items.length > 0 && (
+          <div className="px-3.5 py-2 bg-[#161616] border-b border-neutral-800 shrink-0 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-1.5 text-neutral-300 font-bold">
+                <ShoppingBag className="w-3.5 h-3.5 text-[#FF5722]" />
+                <span>Order Content ({selectedOrder.items.length} items):</span>
+              </div>
+              {selectedOrder.delivery_otp && selectedOrder.order_status !== 'DELIVERED' && (
+                <span className="text-[10px] font-bold text-neutral-400">
+                  OTP: <strong className="text-amber-400 font-mono tracking-widest">{selectedOrder.delivery_otp}</strong>
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {selectedOrder.items.map(item => (
+                <span
+                  key={item.id || item.item_name}
+                  className="px-2 py-0.5 rounded-lg bg-neutral-900 border border-neutral-700/80 text-[11px] text-neutral-200 font-medium flex items-center gap-1"
+                >
+                  <span className="font-bold text-[#FF7043]">{item.quantity}x</span>
+                  <span>{item.item_name}</span>
+                  <span className="text-[10px] text-neutral-400">
+                    (₹{(parseFloat(item.customer_price || 0) * (item.quantity || 1)).toFixed(0)})
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Quick Delivery QR One-Click Banner */}
         {selectedOrder && selectedOrder.order_status !== 'DELIVERED' && (
           <div className="px-3 py-2 bg-gradient-to-r from-amber-950/70 via-neutral-900 to-amber-950/70 border-b border-amber-500/25 flex items-center justify-between gap-2 shrink-0">
@@ -337,6 +373,39 @@ export default function ChatPage({ onOpenAuth, onNavigateToTab }) {
               Messages expire after 4 days automatically
             </span>
           </div>
+
+          {/* Pinned Order Food Items Card in Stream */}
+          {selectedOrder && (
+            <div className="bg-[#181818] border border-neutral-800 rounded-2xl p-3 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-black text-white text-xs flex items-center gap-1.5">
+                  <ShoppingBag className="w-3.5 h-3.5 text-[#FF5722]" />
+                  <span>Order: {selectedOrder.order_token}</span>
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-950/80 text-orange-400 border border-orange-800/60">
+                  {selectedOrder.order_status}
+                </span>
+              </div>
+              {selectedOrder.items && selectedOrder.items.length > 0 && (
+                <div className="divide-y divide-neutral-800/80 bg-neutral-900/60 rounded-xl p-2 space-y-1">
+                  {selectedOrder.items.map(it => (
+                    <div key={it.id || it.item_name} className="flex items-center justify-between text-[11px] pt-1 first:pt-0">
+                      <span className="text-neutral-200">
+                        <strong className="text-white">{it.quantity}x</strong> {it.item_name}
+                      </span>
+                      <span className="font-bold text-neutral-300">
+                        ₹{(parseFloat(it.customer_price || 0) * (it.quantity || 1)).toFixed(0)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 pt-1 border-t border-neutral-800/60">
+                <span>📍 Drop: <strong className="text-white">{selectedOrder.location_name}</strong></span>
+                <span>Total: <strong className="text-emerald-400">₹{parseFloat(selectedOrder.total_customer_price || 0).toFixed(2)}</strong></span>
+              </div>
+            </div>
+          )}
 
           {loadingMessages && messages.length === 0 ? (
             <div className="text-center text-xs text-neutral-500 py-8">
