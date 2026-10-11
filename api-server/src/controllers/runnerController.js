@@ -4,8 +4,21 @@ const { broadcastOrderEvent } = require('../services/socketService');
 // 1. Get Order by Token (For Runner App Scan)
 async function getOrderByToken(req, res) {
   try {
-    const { token } = req.params;
-    const order = await db('orders').where({ order_token: token }).first();
+    let rawToken = req.params.token || req.query.token || req.body?.token;
+    if (!rawToken) {
+      return res.status(400).json({ success: false, message: 'Order token is required.' });
+    }
+
+    const cleanToken = decodeURIComponent(String(rawToken).trim());
+    const tokenVariants = [
+      cleanToken,
+      cleanToken.replace(/^#/, ''),
+      '#' + cleanToken.replace(/^#/, '')
+    ];
+
+    const order = await db('orders')
+      .whereIn('order_token', tokenVariants)
+      .first();
     
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found.' });
@@ -47,16 +60,26 @@ async function getActiveOrders(req, res) {
       }
     }
 
+    const { zone } = req.query;
+
+    let query = db('orders')
+      .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'])
+      .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
+
+    if (zone && String(zone).trim() !== '') {
+      query = query.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
+    }
+
     let orders;
     try {
-      orders = await db('orders')
-        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'])
-        .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')")
-        .orderBy('created_at', 'asc');
+      orders = await query.orderBy('created_at', 'asc');
     } catch (e) {
-      orders = await db('orders')
-        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'])
-        .orderBy('created_at', 'asc');
+      let fallbackQuery = db('orders')
+        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY']);
+      if (zone && String(zone).trim() !== '') {
+        fallbackQuery = fallbackQuery.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
+      }
+      orders = await fallbackQuery.orderBy('created_at', 'asc');
     }
       
     const orderIds = orders.map(o => o.id);
@@ -82,14 +105,26 @@ async function getActiveOrders(req, res) {
 // 2. Verify OTP and Mark as Delivered
 async function verifyOtpAndDeliver(req, res) {
   try {
-    const { token } = req.params;
+    let rawToken = req.params.token || req.body?.token || req.query.token;
     const { otp } = req.body;
 
+    if (!rawToken) {
+      return res.status(400).json({ success: false, message: 'Order token is required.' });
+    }
     if (!otp) {
       return res.status(400).json({ success: false, message: 'OTP is required.' });
     }
 
-    const order = await db('orders').where({ order_token: token }).first();
+    const cleanToken = decodeURIComponent(String(rawToken).trim());
+    const tokenVariants = [
+      cleanToken,
+      cleanToken.replace(/^#/, ''),
+      '#' + cleanToken.replace(/^#/, '')
+    ];
+
+    const order = await db('orders')
+      .whereIn('order_token', tokenVariants)
+      .first();
     
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found.' });
@@ -99,7 +134,7 @@ async function verifyOtpAndDeliver(req, res) {
       return res.status(400).json({ success: false, message: 'Order is already delivered.' });
     }
 
-    if (order.delivery_otp !== otp) {
+    if (String(order.delivery_otp).trim() !== String(otp).trim()) {
       return res.status(400).json({ success: false, message: 'Invalid OTP.' });
     }
 
