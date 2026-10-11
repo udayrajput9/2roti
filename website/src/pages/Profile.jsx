@@ -668,15 +668,6 @@ export default function ProfilePage({
                              order.payment_source === 'wallet' ? 'Loyalty Cashback Wallet' : 'Cash at Outlet'}
                           </span>
                         </div>
-                        {order.is_cashback_awarded && (
-                          <div className="flex justify-between text-amber-400 font-bold">
-                            <span className="flex items-center gap-1">
-                              <Sparkles className="w-3 h-3" />
-                              Loyalty Cashback Earned
-                            </span>
-                            <span>+₹3.00 Credited</span>
-                          </div>
-                        )}
                       </div>
                     )}
 
@@ -721,6 +712,31 @@ export default function ProfilePage({
                         </a>
                       </div>
                     </div>
+
+                    {/* QR Code Delivery Verification (Available from 7:30 PM IST for active orders) */}
+                    {['PLACED', 'ACCEPTED', 'READY', 'OUT_FOR_DELIVERY'].includes(order.order_status) && (() => {
+                      const now = new Date();
+                      const istOffset = 5.5 * 60 * 60 * 1000;
+                      const istTime = new Date(now.getTime() + istOffset);
+                      const totalMins = istTime.getUTCHours() * 60 + istTime.getUTCMinutes();
+                      return totalMins >= 1170; // 19:30 IST = 1170 mins
+                    })() && (
+                      <div className="pt-3 border-t border-neutral-800/80 flex flex-col items-center justify-center p-4 bg-[#181818] rounded-2xl border border-neutral-700/60 text-center space-y-2.5">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-amber-400">
+                          Show this QR to your delivery person
+                        </span>
+                        <div className="p-2 bg-white rounded-xl shadow-md inline-block">
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(order.order_token)}`}
+                            alt="Delivery QR"
+                            className="w-36 h-36 sm:w-44 sm:h-44 object-contain"
+                          />
+                        </div>
+                        <p className="text-[10px] text-neutral-400 font-medium">
+                          Scan to confirm drop-off • Order Token: <strong className="text-white">{order.order_token}</strong>
+                        </p>
+                      </div>
+                    )}
 
                   </div>
                 );

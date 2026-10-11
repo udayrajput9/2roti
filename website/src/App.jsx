@@ -8,7 +8,6 @@ import OnboardingGuard from './components/OnboardingGuard';
 
 import Home from './pages/Home';
 import SearchPage from './pages/Search';
-import OutletPage from './pages/Outlet';
 import ProfilePage from './pages/Profile';
 import CheckoutPage from './pages/Checkout';
 import LegalPolicyPage from './pages/LegalPolicyPage';
@@ -37,7 +36,7 @@ function WebsiteContent() {
     const tab = initialParams.get('tab');
     if (tab) {
       const lower = tab.toLowerCase();
-      if (['home', 'search', 'outlet', 'profile', 'checkout'].includes(lower)) {
+      if (['home', 'search', 'profile', 'checkout'].includes(lower)) {
         return lower;
       }
       if (LEGAL_TABS.includes(lower)) {
@@ -243,13 +242,6 @@ function WebsiteContent() {
             allItems={allSearchItems}
             initialQuery={initialSearchQuery}
             initialCategory={initialCategory}
-          />
-        )}
-
-        {activeTab === 'outlet' && (
-          <OutletPage
-            outletItems={outletItems}
-            onGoHome={() => handleTabChange('home')}
           />
         )}
 

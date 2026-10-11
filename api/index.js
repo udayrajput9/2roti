@@ -6,6 +6,10 @@ let initPromise = null;
 
 function ensureInitialized() {
   if (isInitialized) return Promise.resolve();
+  if (process.env.VERCEL) {
+    isInitialized = true;
+    return Promise.resolve();
+  }
   if (!initPromise) {
     initPromise = initSchema()
       .then(() => {

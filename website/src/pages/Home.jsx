@@ -22,7 +22,6 @@ import {
   CurryIcon,
   ThaliIcon,
   BiryaniIcon,
-  PizzaIcon,
   FoodClassBadge,
   RotiBreadIcon,
   RollIcon,
@@ -30,7 +29,6 @@ import {
   AllDishesIcon,
   PureVegTabIcon,
   NonVegTabIcon,
-  CashbackCoinIcon,
   ExpressDeliveryIcon,
   MasterChefIcon
 } from '../components/FoodIcons';
@@ -60,7 +58,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
     } else if (hour >= 16 && hour < 19) {
       return {
         greeting: 'Evening Snack & Study Break Combos',
-        tagline: 'Fuel your evening study sessions with piping hot rolls, pizzas & curries.',
+        tagline: 'Fuel your evening study sessions with piping hot rolls & curries.',
         tag: 'Evening Break'
       };
     } else if (hour >= 19 && hour < 23) {
@@ -82,7 +80,6 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
   const curryItems = useMemo(() => (menu.Curry || []).filter(i => !i.is_outlet_only), [menu]);
   const thaliItems = useMemo(() => (menu.Thali || []).filter(i => !i.is_outlet_only), [menu]);
   const biryaniItems = useMemo(() => (menu.Biryani || []).filter(i => !i.is_outlet_only), [menu]);
-  const pizzaItems = useMemo(() => (menu.Pizza || []).filter(i => !i.is_outlet_only), [menu]);
   const breadItems = useMemo(() => (menu.Breads || []).filter(i => !i.is_outlet_only), [menu]);
   const rollItems = useMemo(() => (menu.Rolls || []).filter(i => !i.is_outlet_only), [menu]);
   const riceItems = useMemo(() => (menu.Rice || []).filter(i => !i.is_outlet_only), [menu]);
@@ -112,14 +109,6 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
         IconComponent: BiryaniIcon,
         count: biryaniItems.length || 3,
         items: biryaniItems
-      },
-      {
-        id: 'Pizza',
-        label: 'Pizza',
-        subtitle: 'Artisan Crust',
-        IconComponent: PizzaIcon,
-        count: pizzaItems.length || 2,
-        items: pizzaItems
       }
     ];
 
@@ -164,7 +153,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
     }
 
     return list;
-  }, [curryItems, thaliItems, biryaniItems, pizzaItems, breadItems, rollItems, riceItems, sysSettings?.categories]);
+  }, [curryItems, thaliItems, biryaniItems, breadItems, rollItems, riceItems, sysSettings?.categories]);
 
   const currentCategoryObj = categories.find(c => c.id === activeCategory);
   const rawItems = currentCategoryObj?.items || [];
@@ -180,18 +169,17 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
     });
   }, [rawItems, dietaryFilter]);
 
-  // Top 4 Campus Bestsellers for Spotlight Carousel
+  // Top 3 Campus Bestsellers for Spotlight Carousel
   const topBestsellers = useMemo(() => {
-    const all = [...curryItems, ...thaliItems, ...biryaniItems, ...pizzaItems];
+    const all = [...curryItems, ...thaliItems, ...biryaniItems];
     const picks = [
       all.find(i => (i.name || '').toLowerCase().includes('chicken curry')),
       all.find(i => (i.name || '').toLowerCase().includes('veg thali')),
-      all.find(i => (i.name || '').toLowerCase().includes('chicken biryani')),
-      all.find(i => (i.name || '').toLowerCase().includes('paneer pizza'))
+      all.find(i => (i.name || '').toLowerCase().includes('chicken biryani'))
     ].filter(Boolean);
 
     return picks.length >= 2 ? picks : all.slice(0, 4);
-  }, [curryItems, thaliItems, biryaniItems, pizzaItems]);
+  }, [curryItems, thaliItems, biryaniItems]);
 
   return (
     <div className="pb-32 md:pb-16 pt-3 px-3 sm:px-4 max-w-4xl mx-auto space-y-7 animate-in fade-in duration-300">
@@ -237,15 +225,11 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
             {mealContext.tagline}
           </p>
 
-          {/* 3 Quick Perks Bar */}
-          <div className="grid grid-cols-3 gap-2 mt-4 pt-3.5 border-t border-neutral-800/80 text-[11px]">
+          {/* 2 Quick Perks Bar */}
+          <div className="grid grid-cols-2 gap-2 mt-4 pt-3.5 border-t border-neutral-800/80 text-[11px]">
             <div className="flex items-center gap-1.5 font-bold text-neutral-200">
               <ExpressDeliveryIcon className="w-4 h-4 shrink-0" />
               <span>15-20 Min Delivery</span>
-            </div>
-            <div className="flex items-center gap-1.5 font-bold text-neutral-200">
-              <CashbackCoinIcon className="w-4 h-4 shrink-0" />
-              <span>{sysSettings?.hero_banner?.cashback_text || '₹13 Wallet Cashback'}</span>
             </div>
             <div className="flex items-center gap-1.5 font-bold text-neutral-200">
               <Flame className="w-3.5 h-3.5 text-[#FF7043] shrink-0" />
@@ -363,6 +347,11 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
           </div>
         </div>
       )}
+
+      {/* Time Notice Banner */}
+      <div className="bg-amber-950/60 border border-amber-500/50 rounded-2xl p-3 flex items-center justify-center gap-2 text-amber-300 text-xs sm:text-sm font-black shadow-md">
+        <span>⏰ Orders accepted: 3 PM – 6 PM IST only</span>
+      </div>
 
       {/* 4. Luxury Category Selector */}
       <div className="space-y-3">
@@ -630,7 +619,27 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
           Why Students Choose 2 Roti
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">{sysSettings?.trust_badges && Array.isArray(sysSettings.trust_badges) ? sysSettings.trust_badges.map((badge, index) => { const colors = ["bg-[#FF5722]/20 border-[#FF5722]/40 text-[#FF5722]", "bg-emerald-500/20 border-emerald-500/40 text-emerald-400", "bg-amber-500/20 border-amber-500/40 text-amber-400"]; const icons = [ExpressDeliveryIcon, MasterChefIcon, CashbackCoinIcon]; const cIndex = index % 3; const ColorClasses = colors[cIndex]; const IconComponent = icons[cIndex]; return (<div key={index} className="p-4 rounded-2xl bg-[#121212] border border-neutral-800/90 shadow-sm space-y-1.5"><div className={`w-8 h-8 rounded-xl border flex items-center justify-center ${ColorClasses}`}><IconComponent className="w-5 h-5" /></div><h4 className="text-xs font-black text-white">{badge.title}</h4><p className="text-[11px] text-neutral-400 leading-relaxed font-medium">{badge.desc}</p></div>); }) : null}</div></div>{/* 9. Sticky Floating Quick Cart Bar (When Items in Basket) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {sysSettings?.trust_badges && Array.isArray(sysSettings.trust_badges) ? sysSettings.trust_badges.map((badge, index) => {
+            const colors = ["bg-[#FF5722]/20 border-[#FF5722]/40 text-[#FF5722]", "bg-emerald-500/20 border-emerald-500/40 text-emerald-400", "bg-amber-500/20 border-amber-500/40 text-amber-400"];
+            const icons = [ExpressDeliveryIcon, MasterChefIcon, ShieldCheck];
+            const cIndex = index % 3;
+            const ColorClasses = colors[cIndex];
+            const IconComponent = icons[cIndex];
+            return (
+              <div key={index} className="p-4 rounded-2xl bg-[#121212] border border-neutral-800/90 shadow-sm space-y-1.5">
+                <div className={`w-8 h-8 rounded-xl border flex items-center justify-center ${ColorClasses}`}>
+                  <IconComponent className="w-5 h-5" />
+                </div>
+                <h4 className="text-xs font-black text-white">{badge.title}</h4>
+                <p className="text-[11px] text-neutral-400 leading-relaxed font-medium">{badge.desc}</p>
+              </div>
+            );
+          }) : null}
+        </div>
+      </div>
+
+      {/* 9. Sticky Floating Quick Cart Bar (When Items in Basket) */}
       {totalCount > 0 && onOpenCart && (
         <div className="fixed bottom-16 md:bottom-6 inset-x-0 z-40 px-4 flex justify-center pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div

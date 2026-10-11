@@ -35,6 +35,9 @@ async function getMenu(req, res) {
       .where(function() {
         this.where('is_available', true).orWhere('is_available', 1);
       })
+      .whereNot(function() {
+        this.where('category', 'Pizza').orWhereRaw("LOWER(name) LIKE '%pizza%'");
+      })
       .orderBy('category', 'asc')
       .orderBy('id', 'asc');
 

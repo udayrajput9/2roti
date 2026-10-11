@@ -29,6 +29,18 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
   }, []);
 
   const handlePlaceOrder = async () => {
+    // IST time check: allow payment only between 15:00-18:00 IST
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(now.getTime() + istOffset);
+    const istHours = istTime.getUTCHours();
+    const istMinutes = istTime.getUTCMinutes();
+    const totalMinutes = istHours * 60 + istMinutes;
+    if (totalMinutes < 900 || totalMinutes >= 1080) { // 900=3PM, 1080=6PM
+      setError('Orders are accepted only between 3:00 PM and 6:00 PM IST.');
+      return;
+    }
+
     if (!isAuthenticated) {
       setError('Please log in with your phone number to place the order.');
       return;

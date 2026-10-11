@@ -76,6 +76,24 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
   const [printCampusFilter, setPrintCampusFilter] = useState('ALL');
   const [loadingAction, setLoadingAction] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [autoPdfPending, setAutoPdfPending] = useState(false);
+
+  // Auto PDF Generation check: trigger at 18:05 IST (6:05 PM)
+  useEffect(() => {
+    const checkPdfTime = () => {
+      const now = new Date();
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const istTime = new Date(now.getTime() + istOffset);
+      const hours = istTime.getUTCHours();
+      const minutes = istTime.getUTCMinutes();
+      if (hours === 18 && minutes >= 5) {
+        setAutoPdfPending(true);
+      }
+    };
+    checkPdfTime();
+    const timer = setInterval(checkPdfTime, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Sync state if activeTab changes from Sidebar navigation
   useEffect(() => {
@@ -415,6 +433,59 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
               className="px-3 py-1.5 rounded-xl bg-white text-[#BF360C] font-black text-xs shadow-md"
             >
               Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Auto PDF Generation Notification Card (6:05 PM IST) */}
+      {autoPdfPending && (
+        <div className="bg-gradient-to-r from-blue-900/90 via-indigo-900/90 to-purple-900/90 border border-blue-500/50 p-4 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-blue-300 shrink-0">
+              <Printer className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="font-black text-sm tracking-wide">
+                📄 Daily order slips are ready! Download zone-wise PDFs:
+              </div>
+              <p className="text-xs text-blue-200">
+                All today's orders grouped by hostel delivery zones. Print or share directly with campus runners.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap self-stretch md:self-auto justify-end">
+            <a
+              href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=Buddha`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all"
+            >
+              <span>Buddha Zone PDF</span>
+            </a>
+            <a
+              href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=KIPM`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all"
+            >
+              <span>KIPM Zone PDF</span>
+            </a>
+            <a
+              href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=ITM`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all"
+            >
+              <span>ITM Zone PDF</span>
+            </a>
+            <button
+              onClick={() => setAutoPdfPending(false)}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -896,7 +967,7 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
                                 disabled={loadingAction}
                                 className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all"
                               >
-                                Confirm Drop-off (+₹3)
+                                Confirm Drop-off
                               </button>
                             )}
 

@@ -31,13 +31,20 @@ async function getActiveOrders(req, res) {
       .whereIn('order_status', ['READY', 'OUT_FOR_DELIVERY'])
       .orderBy('created_at', 'asc');
       
-    // Do NOT expose OTPs
-    const safeOrders = orders.map(o => {
-      delete o.delivery_otp;
+    const orderIds = orders.map(o => o.id);
+    const items = await db('order_items').whereIn('order_id', orderIds);
+    const itemsMap = new Map();
+    items.forEach(it => {
+      if (!itemsMap.has(it.order_id)) itemsMap.set(it.order_id, []);
+      itemsMap.get(it.order_id).push(it);
+    });
+
+    const enrichedOrders = orders.map(o => {
+      o.items = itemsMap.get(o.id) || [];
       return o;
     });
 
-    return res.json({ success: true, orders: safeOrders });
+    return res.json({ success: true, orders: enrichedOrders });
   } catch (err) {
     console.error('getActiveOrders error:', err);
     return res.status(500).json({ success: false, message: 'Failed to fetch active orders.' });
@@ -75,8 +82,8 @@ async function verifyOtpAndDeliver(req, res) {
         updated_at: db.fn.now()
       });
 
-      // Award Cashback upon DELIVERED (Only for non-wallet real-money orders)
-      if (!order.is_cashback_awarded && order.payment_source === 'razorpay') {
+      // /* CASHBACK_DISABLED */ Award Cashback upon DELIVERED (Only for non-wallet real-money orders)
+      if (false && !order.is_cashback_awarded && order.payment_source === 'razorpay') { /* CASHBACK_DISABLED */
         const cbRow = await trx('system_settings').where({ key: 'cashback_per_order' }).first();
         const cashbackAmount = cbRow && !isNaN(parseFloat(cbRow.value)) ? parseFloat(cbRow.value) : 3.00;
 

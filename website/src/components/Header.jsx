@@ -45,7 +45,6 @@ export default function Header({
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'search', label: 'Search', icon: Search },
-    { id: 'outlet', label: 'Outlet', icon: Store, badge: 'Pickup' },
     { id: 'profile', label: 'Profile', icon: UserIcon }
   ];
 

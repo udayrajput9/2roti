@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, MapPin, Sparkles, ShieldCheck, Zap } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { FoodClassBadge, RotiBreadIcon, CashbackCoinIcon } from './FoodIcons';
+import { FoodClassBadge, RotiBreadIcon } from './FoodIcons';
 
 const RECOMMENDED_ADDONS = [
   {
@@ -295,15 +295,6 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }) {
                 ) : (
                   <span className="font-bold text-white">₹{deliveryFee.toFixed(2)}</span>
                 )}
-              </div>
-
-              {/* Wallet Cashback Notice */}
-              <div className="pt-2 border-t border-neutral-800/60 flex items-center justify-between text-[11px] text-amber-400 font-bold">
-                <span className="flex items-center gap-1.5">
-                  <CashbackCoinIcon className="w-3.5 h-3.5 shrink-0" />
-                  <span>Student Cashback Earned:</span>
-                </span>
-                <span>+ ₹3.00 into Wallet</span>
               </div>
 
               <div className="flex justify-between text-sm font-black text-white pt-2 border-t border-neutral-800">

@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+
+const String kBaseUrl = 'https://www.doroti.shop';
 
 void main() {
   runApp(const RunnerApp());
@@ -84,7 +87,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
     
     final List<Barcode> barcodes = capture.barcodes;
     for (final barcode in barcodes) {
-      if (barcode.rawValue != null && barcode.rawValue!.startsWith('#2R-')) {
+      final code = barcode.rawValue?.trim();
+      if (code != null && code.isNotEmpty) {
         setState(() => isProcessing = true);
         cameraController.stop();
         
@@ -92,14 +96,16 @@ class _ScannerScreenState extends State<ScannerScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => OrderVerifyScreen(
-              orderToken: barcode.rawValue!,
+              orderToken: code,
               cameraController: cameraController,
             ),
           ),
         );
         
-        setState(() => isProcessing = false);
-        cameraController.start();
+        if (mounted) {
+          setState(() => isProcessing = false);
+          cameraController.start();
+        }
         break;
       }
     }
@@ -132,7 +138,6 @@ class ZoneListScreen extends StatefulWidget {
 }
 
 class _ZoneListScreenState extends State<ZoneListScreen> {
-  final String baseUrl = 'https://doroti.shop';
   List<dynamic> orders = [];
   bool isLoading = true;
   Timer? timer;
@@ -152,7 +157,7 @@ class _ZoneListScreenState extends State<ZoneListScreen> {
 
   Future<void> fetchOrders() async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/api/runner/active-orders'));
+      final res = await http.get(Uri.parse('$kBaseUrl/api/runner/active-orders'));
       final data = jsonDecode(res.body);
 
       if (res.statusCode == 200 && data['success'] == true) {
@@ -168,6 +173,16 @@ class _ZoneListScreenState extends State<ZoneListScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
     }
   }
 
@@ -192,51 +207,174 @@ class _ZoneListScreenState extends State<ZoneListScreen> {
           : orders.isEmpty
               ? const Center(child: Text('No active deliveries for this zone.'))
               : ListView.builder(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   itemCount: orders.length,
                   itemBuilder: (context, index) {
                     final order = orders[index];
+                    final String customerName = order['customer_name'] ?? 'Unknown Customer';
+                    final String customerPhone = order['customer_phone'] ?? '';
+                    final String otp = order['delivery_otp']?.toString() ?? '----';
+                    final List<dynamic> items = order['items'] as List<dynamic>? ?? [];
+
                     return Card(
-                      color: Colors.grey.shade900,
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: ListTile(
-                        title: Text(
-                          order['customer_name'] ?? 'Unknown',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
+                      color: const Color(0xFF1C1C1C),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.grey.shade800),
+                      ),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(order['customer_phone'] ?? 'No Phone'),
+                            // Header: Customer Name (Bold & Large) + Status Badge
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    customerName,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: order['order_status'] == 'READY'
+                                        ? Colors.blue.shade900
+                                        : Colors.purple.shade900,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    order['order_status'] ?? 'ON WAY',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+
+                            // Order Token
                             Text(
-                              order['order_token'],
-                              style: const TextStyle(color: Colors.orange, fontSize: 12),
+                              order['order_token'] ?? '',
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Prominent Phone Number with Visual Call Button
+                            Row(
+                              children: [
+                                const Icon(Icons.phone, size: 16, color: Colors.grey),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    customerPhone.isNotEmpty ? customerPhone : 'No Phone Provided',
+                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                if (customerPhone.isNotEmpty)
+                                  ElevatedButton.icon(
+                                    icon: const Icon(Icons.call, size: 16, color: Colors.white),
+                                    label: const Text('Call', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green.shade700,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () => _makePhoneCall(customerPhone),
+                                  ),
+                              ],
+                            ),
+                            const Divider(height: 22, color: Colors.white24),
+
+                            // Prominent 4-Digit OTP Box
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.indigo.shade950,
+                                borderRadius: BorderRadius.circular(10),
+                                border: BorderSide(color: Colors.indigo.shade700),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'DELIVERY OTP:',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.indigoAccent,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                  Text(
+                                    otp,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.black,
+                                      letterSpacing: 4,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Order items
+                            if (items.isNotEmpty) ...[
+                              const Text(
+                                'Order Items:',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                              ),
+                              const SizedBox(height: 4),
+                              ...items.map((it) => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                child: Text(
+                                  '• ${it['quantity']}x ${it['item_name']}',
+                                  style: const TextStyle(fontSize: 13, color: Colors.white70),
+                                ),
+                              )),
+                              const SizedBox(height: 12),
+                            ],
+
+                            // Verify Delivery Action Button
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange.shade800,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => OrderVerifyScreen(
+                                        orderToken: order['order_token'],
+                                        cameraController: null,
+                                      ),
+                                    ),
+                                  ).then((_) => fetchOrders());
+                                },
+                                child: const Text(
+                                  'Verify OTP / Mark Delivered',
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: order['order_status'] == 'READY' ? Colors.blue.shade900 : Colors.purple.shade900,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            order['order_status'] == 'READY' ? 'READY' : 'ON WAY',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        onTap: () {
-                          // Allow them to manually enter OTP if they don't want to scan QR
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => OrderVerifyScreen(
-                                orderToken: order['order_token'],
-                                cameraController: null,
-                              ),
-                            ),
-                          ).then((_) => fetchOrders());
-                        },
                       ),
                     );
                   },
@@ -263,7 +401,6 @@ class OrderVerifyScreen extends StatefulWidget {
 }
 
 class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
-  final String baseUrl = 'https://doroti.shop';
   Map<String, dynamic>? orderDetails;
   bool isLoading = true;
   String errorMsg = '';
@@ -278,7 +415,7 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
 
   Future<void> fetchOrderDetails() async {
     try {
-      final res = await http.get(Uri.parse('$baseUrl/api/runner/order/${widget.orderToken}'));
+      final res = await http.get(Uri.parse('$kBaseUrl/api/runner/order/${widget.orderToken}'));
       final data = jsonDecode(res.body);
 
       if (res.statusCode == 200 && data['success'] == true) {
@@ -300,6 +437,16 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
     }
   }
 
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    }
+  }
+
   Future<void> verifyOtp() async {
     final otp = otpController.text.trim();
     if (otp.length != 4) {
@@ -313,7 +460,7 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
 
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/api/runner/order/${widget.orderToken}/verify-otp'),
+        Uri.parse('$kBaseUrl/api/runner/order/${widget.orderToken}/verify-otp'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'otp': otp}),
       );
@@ -351,7 +498,9 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
         const SnackBar(content: Text('Network error.'), backgroundColor: Colors.red),
       );
     } finally {
-      setState(() => isSubmitting = false);
+      if (mounted) {
+        setState(() => isSubmitting = false);
+      }
     }
   }
 
@@ -390,10 +539,12 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
     }
 
     final order = orderDetails!;
+    final String customerName = order['customer_name'] ?? 'Unknown Customer';
+    final String? customerPhone = order['customer_phone'];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(order['order_token']),
+        title: Text(order['order_token'] ?? 'Order Details'),
         backgroundColor: Colors.black,
       ),
       body: SingleChildScrollView(
@@ -406,21 +557,54 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
               decoration: BoxDecoration(
                 color: Colors.grey.shade900,
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade800),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Deliver To:', style: TextStyle(color: Colors.grey.shade400)),
+                  Text('Deliver To:', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
                   const SizedBox(height: 4),
-                  Text(order['customer_name'] ?? 'Unknown', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
+                  // Prominent Customer Name
+                  Text(
+                    customerName,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  const SizedBox(height: 6),
                   Text('Location: ${order['location_name']}', style: const TextStyle(fontSize: 16)),
-                  if (order['customer_phone'] != null) ...[
+                  if (order['delivery_address_note'] != null && order['delivery_address_note'].toString().isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    Text('Phone: ${order['customer_phone']}', style: const TextStyle(fontSize: 16)),
+                    Text(
+                      'Note: ${order['delivery_address_note']}',
+                      style: const TextStyle(fontSize: 14, color: Colors.amberAccent),
+                    ),
+                  ],
+                  if (customerPhone != null && customerPhone.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.phone, size: 18, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            customerPhone,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.call, size: 16, color: Colors.white),
+                          label: const Text('Call', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade700,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => _makePhoneCall(customerPhone),
+                        ),
+                      ],
+                    ),
                   ],
                   const Divider(height: 30),
-                  Text('Payment:', style: TextStyle(color: Colors.grey.shade400)),
+                  Text('Payment:', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
                   Text(
                     '${order['payment_source'].toString().toUpperCase()} - ${order['payment_status']}',
                     style: TextStyle(
@@ -449,7 +633,7 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
                 ),
               )
             else ...[
-              const Text('Ask Customer for 4-Digit OTP:', style: TextStyle(fontSize: 16)),
+              const Text('Ask Customer for 4-Digit OTP:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 10),
               TextField(
                 controller: otpController,
@@ -460,6 +644,7 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   counterText: "",
+                  hintText: "••••",
                 ),
               ),
               const SizedBox(height: 20),
