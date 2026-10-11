@@ -8,6 +8,7 @@ dist/
 */dist/
 build/
 */build/
+*.apk
 
 # Local SQLite databases
 *.sqlite

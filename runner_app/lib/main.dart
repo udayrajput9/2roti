@@ -315,9 +315,9 @@ class _ZoneListScreenState extends State<ZoneListScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
-                                color: Colors.indigo.shade950,
+                                color: Colors.indigo.shade900,
                                 borderRadius: BorderRadius.circular(10),
-                                border: BorderSide(color: Colors.indigo.shade700),
+                                border: Border.all(color: Colors.indigo.shade700),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -335,7 +335,7 @@ class _ZoneListScreenState extends State<ZoneListScreen> {
                                     otp,
                                     style: const TextStyle(
                                       fontSize: 20,
-                                      fontWeight: FontWeight.black,
+                                      fontWeight: FontWeight.w900,
                                       letterSpacing: 4,
                                       color: Colors.white,
                                     ),
@@ -665,7 +665,7 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade900.withOpacity(0.5),
+                  color: Colors.green.shade900.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.green),
                 ),
@@ -681,7 +681,7 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Colors.amber.shade950.withOpacity(0.8),
+                    color: Colors.amber.shade900.withValues(alpha: 0.8),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: Colors.amber.shade600),
                   ),
@@ -694,7 +694,7 @@ class _OrderVerifyScreenState extends State<OrderVerifyScreen> {
                       const SizedBox(height: 6),
                       Text(
                         widget.initialOtp!,
-                        style: const TextStyle(fontSize: 32, fontWeight: FontWeight.black, color: Colors.white, letterSpacing: 8),
+                        style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 8),
                       ),
                       if (widget.scannedCustomerName != null) ...[
                         const SizedBox(height: 4),
