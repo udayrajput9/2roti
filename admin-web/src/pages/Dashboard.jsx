@@ -13,6 +13,7 @@ import {
   Download,
   Table
 } from 'lucide-react';
+import CampusOperationsControl from '../components/CampusOperationsControl';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -183,6 +184,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Campus Operations Command Center (6:10 PM Accept & 7:30 PM Runner Dispatch) */}
+      <CampusOperationsControl />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

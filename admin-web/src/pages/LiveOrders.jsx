@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useLiveOrders } from '../context/LiveOrderContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import CampusOperationsControl from '../components/CampusOperationsControl';
 
 export default function LiveOrders({ activeTab = 'live_orders_active', onSelectTab }) {
   const {
@@ -275,7 +276,7 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
     setLoadingAction(true);
     try {
       for (const order of placedOrders) {
-        await updateStatus(order.id, 'ACCEPTED');
+        await updateOrderStatus(order.id, 'ACCEPTED');
       }
     } catch (err) {
       alert("Some orders failed to accept.");
@@ -300,7 +301,7 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
     try {
       for (const order of readyOrders) {
         const nextStatus = order.is_outlet_order ? 'DELIVERED' : 'OUT_FOR_DELIVERY';
-        await updateStatus(order.id, nextStatus);
+        await updateOrderStatus(order.id, nextStatus);
       }
     } catch (err) {
       alert("Some orders failed to dispatch.");
@@ -526,6 +527,9 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
           </div>
         </div>
       )}
+
+      {/* Campus Operations Command Center (6:10 PM Accept & 7:30 PM Runner Dispatch) */}
+      <CampusOperationsControl />
 
       {/* Screen Title & Action Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">

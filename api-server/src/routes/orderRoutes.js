@@ -14,6 +14,10 @@ router.patch('/:id/status', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER', 'V
 router.patch('/:id/assign-runner', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER']), orderController.assignRunner);
 router.patch('/:id/verify-payment', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER']), orderController.verifyPayment);
 
+// Zone Operations (Accept & Runner Dispatch)
+router.post('/bulk-accept-zone', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER', 'VENDOR']), orderController.bulkAcceptZone);
+router.post('/dispatch-zone', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER', 'VENDOR']), orderController.dispatchZone);
+
 // Receipt route (Staff can view, or we can make it public for runners to verify, or just Staff)
 // Actually we don't need auth here if we just want a simple link, but let's restrict it to staff
 router.get('/bulk-receipt', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER', 'VENDOR']), orderController.getBulkReceipt);

@@ -1377,6 +1377,157 @@ async function getDailyZoneTable(req, res) {
   }
 }
 
+// 11. Bulk Accept Orders for a Zone (Active from 6:10 PM IST)
+async function bulkAcceptZone(req, res) {
+  try {
+    const { zone } = req.body; // 'Buddha', 'KIPM', 'ITM', or 'ALL'
+    if (!zone) {
+      return res.status(400).json({ success: false, message: 'Zone is required.' });
+    }
+
+    let query = db('orders')
+      .where('order_status', 'PLACED')
+      .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
+
+    if (zone !== 'ALL') {
+      query = query.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
+    }
+
+    let placedOrders = [];
+    try {
+      placedOrders = await query.select('id');
+    } catch (e) {
+      let fallback = db('orders').where('order_status', 'PLACED');
+      if (zone !== 'ALL') {
+        fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
+      }
+      placedOrders = await fallback.select('id');
+    }
+
+    const orderIds = placedOrders.map(o => o.id);
+
+    if (orderIds.length === 0) {
+      return res.json({ success: true, count: 0, message: `No pending PLACED orders found for ${zone}.`, orders: [] });
+    }
+
+    await db('orders')
+      .whereIn('id', orderIds)
+      .update({
+        order_status: 'ACCEPTED',
+        updated_at: db.fn.now()
+      });
+
+    const updatedOrders = await db('orders').whereIn('id', orderIds);
+    for (const ord of updatedOrders) {
+      const items = await db('order_items').where({ order_id: ord.id });
+      ord.items = items;
+      broadcastOrderEvent('ORDER_STATUS_CHANGED', ord);
+    }
+
+    return res.json({
+      success: true,
+      count: orderIds.length,
+      message: `Accepted ${orderIds.length} orders for ${zone}.`,
+      orders: updatedOrders
+    });
+  } catch (err) {
+    console.error('bulkAcceptZone error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to bulk accept orders for zone.' });
+  }
+}
+
+// 12. Dispatch Zone Orders & Assign Campus Runner (Active from 7:30 PM IST)
+async function dispatchZone(req, res) {
+  try {
+    const { zone, runner_name, runner_phone, is_auto } = req.body;
+    if (!zone) {
+      return res.status(400).json({ success: false, message: 'Zone is required.' });
+    }
+
+    const autoRunners = {
+      buddha: { name: 'Campus Runner (Buddha)', phone: '9876543210' },
+      kipm: { name: 'Campus Runner (KIPM)', phone: '9876543210' },
+      itm: { name: 'Campus Runner (ITM)', phone: '9876543210' }
+    };
+
+    const zoneKey = String(zone).trim().toLowerCase();
+    let finalRunnerName = runner_name ? String(runner_name).replace(/[<>]/g, '').trim().substring(0, 50) : null;
+    let finalRunnerPhone = runner_phone ? String(runner_phone).replace(/\D/g, '').slice(-10) : null;
+
+    if (is_auto || !finalRunnerName) {
+      const autoMatch = Object.keys(autoRunners).find(k => zoneKey.includes(k));
+      if (autoMatch) {
+        finalRunnerName = autoRunners[autoMatch].name;
+        finalRunnerPhone = autoRunners[autoMatch].phone;
+      } else {
+        finalRunnerName = `Campus Runner (${zone})`;
+        finalRunnerPhone = '9876543210';
+      }
+    }
+
+    if (!finalRunnerPhone || finalRunnerPhone.length < 10) {
+      finalRunnerPhone = '9876543210';
+    }
+
+    // Orders to dispatch: campus orders for this zone that are PLACED, ACCEPTED, PREPARING, or READY
+    let query = db('orders')
+      .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
+      .where('is_outlet_order', false)
+      .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
+
+    if (zone !== 'ALL') {
+      query = query.whereRaw('LOWER(location_name) LIKE ?', ['%' + zoneKey + '%']);
+    }
+
+    let targetOrders = [];
+    try {
+      targetOrders = await query.select('id');
+    } catch (e) {
+      let fallback = db('orders')
+        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
+        .where('is_outlet_order', false);
+      if (zone !== 'ALL') {
+        fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + zoneKey + '%']);
+      }
+      targetOrders = await fallback.select('id');
+    }
+
+    const orderIds = targetOrders.map(o => o.id);
+
+    if (orderIds.length === 0) {
+      return res.json({ success: true, count: 0, message: `No orders to dispatch for ${zone}.`, orders: [] });
+    }
+
+    await db('orders')
+      .whereIn('id', orderIds)
+      .update({
+        order_status: 'OUT_FOR_DELIVERY',
+        assigned_runner_name: finalRunnerName,
+        assigned_runner_phone: finalRunnerPhone,
+        updated_at: db.fn.now()
+      });
+
+    const updatedOrders = await db('orders').whereIn('id', orderIds);
+    for (const ord of updatedOrders) {
+      const items = await db('order_items').where({ order_id: ord.id });
+      ord.items = items;
+      broadcastOrderEvent('ORDER_STATUS_CHANGED', ord);
+    }
+
+    return res.json({
+      success: true,
+      count: orderIds.length,
+      runner_name: finalRunnerName,
+      runner_phone: finalRunnerPhone,
+      message: `Dispatched ${orderIds.length} orders for ${zone} to runner ${finalRunnerName}.`,
+      orders: updatedOrders
+    });
+  } catch (err) {
+    console.error('dispatchZone error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to dispatch orders for zone.' });
+  }
+}
+
 module.exports = {
   createOrder,
   getCustomerOrders,
@@ -1387,5 +1538,7 @@ module.exports = {
   getReceipt,
   getBulkReceipt,
   getDailyZonePdf,
-  getDailyZoneTable
+  getDailyZoneTable,
+  bulkAcceptZone,
+  dispatchZone
 };

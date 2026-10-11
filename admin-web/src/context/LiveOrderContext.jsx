@@ -162,6 +162,48 @@ export function LiveOrderProvider({ children }) {
     }
   };
 
+  const bulkAcceptZone = async (zone) => {
+    try {
+      const res = await fetch('/api/orders/bulk-accept-zone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zone })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Bulk accept failed.');
+      }
+      if (data.orders && Array.isArray(data.orders)) {
+        const updatedMap = new Map(data.orders.map(o => [o.id, o]));
+        setOrders(prev => prev.map(o => updatedMap.get(o.id) || o));
+      }
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const dispatchZone = async ({ zone, runner_name, runner_phone, is_auto }) => {
+    try {
+      const res = await fetch('/api/orders/dispatch-zone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zone, runner_name, runner_phone, is_auto })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Dispatch failed.');
+      }
+      if (data.orders && Array.isArray(data.orders)) {
+        const updatedMap = new Map(data.orders.map(o => [o.id, o]));
+        setOrders(prev => prev.map(o => updatedMap.get(o.id) || o));
+      }
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  };
+
   return (
     <LiveOrderContext.Provider
       value={{
@@ -173,6 +215,8 @@ export function LiveOrderProvider({ children }) {
         updateOrderStatus,
         assignRunner,
         verifyPayment,
+        bulkAcceptZone,
+        dispatchZone,
         refreshOrders: fetchOrders
       }}
     >

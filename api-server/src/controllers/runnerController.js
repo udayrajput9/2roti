@@ -40,26 +40,6 @@ async function getOrderByToken(req, res) {
 // 1.5 Get all active orders (for Runner Tabs)
 async function getActiveOrders(req, res) {
   try {
-    // Auto status update: at or after 19:30 IST (7:30 PM), orders transition to OUT_FOR_DELIVERY
-    const now = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const istNow = new Date(now.getTime() + istOffset);
-    const totalMinutes = istNow.getUTCHours() * 60 + istNow.getUTCMinutes();
-
-    if (totalMinutes >= 1170) { // 19:30 IST
-      try {
-        await db('orders')
-          .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
-          .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')")
-          .update({
-            order_status: 'OUT_FOR_DELIVERY',
-            updated_at: db.fn.now()
-          });
-      } catch (autoErr) {
-        // Fallback for drivers where INTERVAL syntax differs
-      }
-    }
-
     const { zone } = req.query;
 
     let query = db('orders')
