@@ -8,7 +8,9 @@ import {
   MapPin,
   Clock,
   ArrowUpRight,
-  AlertCircle
+  AlertCircle,
+  Printer,
+  Download
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -86,6 +88,58 @@ export default function Dashboard() {
         </p>
       </div>
 
+      {/* Daily Campus Zone Slips (Buddha, KIPM, ITM) Download Section */}
+      <div className="bg-gradient-to-r from-blue-950/80 via-indigo-950/80 to-purple-950/80 border border-blue-500/40 p-5 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-blue-300 shrink-0">
+            <Printer className="w-6 h-6 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-black text-white tracking-wide">
+                Daily Campus Order Slips (6:05 PM Zone PDFs)
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-950 text-emerald-400 border border-emerald-800">
+                Ready for Print
+              </span>
+            </div>
+            <p className="text-xs text-blue-200/80 mt-0.5">
+              Hostel delivery slips grouped by campus zones with QR codes, customer name & secret OTP for runners.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 flex-wrap w-full md:w-auto justify-start md:justify-end">
+          <a
+            href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=Buddha`}
+            target="_blank"
+            rel="noreferrer"
+            className="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-900/50 flex items-center gap-2 transition-all hover:scale-105"
+          >
+            <Download className="w-4 h-4" />
+            <span>Buddha Zone PDF</span>
+          </a>
+          <a
+            href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=KIPM`}
+            target="_blank"
+            rel="noreferrer"
+            className="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-900/50 flex items-center gap-2 transition-all hover:scale-105"
+          >
+            <Download className="w-4 h-4" />
+            <span>KIPM Zone PDF</span>
+          </a>
+          <a
+            href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=ITM`}
+            target="_blank"
+            rel="noreferrer"
+            className="px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md shadow-purple-900/50 flex items-center gap-2 transition-all hover:scale-105"
+          >
+            <Download className="w-4 h-4" />
+            <span>ITM Zone PDF</span>
+          </a>
+        </div>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, idx) => {
@@ -118,7 +172,7 @@ export default function Dashboard() {
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">Campus Deliveries (Curry/Thali/Biryani/Pizza)</span>
+                <span className="text-slate-300">Campus Deliveries (Curry / Thali / Biryani / Breads)</span>
                 <span className="text-white font-bold">{stats?.campus_orders || 0}</span>
               </div>
               <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
