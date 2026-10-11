@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Lock, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { isCurryOrThaliItem, isBreadOrAddonItem } from '../utils/comboValidation';
 
 const RAZORPAY_KEY = 'rzp_test_2rotiDemoKey123'; // Used strictly as a fallback if window.razorpayKey is not set
 
@@ -48,6 +49,13 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
 
     if (cartItems.length === 0) {
       setError('Your food basket is empty.');
+      return;
+    }
+
+    const hasCurryOrThali = cartItems.some(item => isCurryOrThaliItem(item) && item.quantity > 0);
+    const hasBreads = cartItems.some(item => isBreadOrAddonItem(item) && item.quantity > 0);
+    if (hasBreads && !hasCurryOrThali) {
+      setError('Roti and breads can only be ordered as a combo with Curry or Thali. Please add a Curry or Thali dish to your basket.');
       return;
     }
 

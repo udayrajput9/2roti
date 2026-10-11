@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { isCurryOrThaliItem, isBreadOrAddonItem } from '../utils/comboValidation';
 
 const CartContext = createContext(null);
 
@@ -18,7 +19,25 @@ export function CartProvider({ children }) {
     } catch (e) {}
   }, [cartItems]);
 
+  // Auto-prune orphan bread/roti items if no Curry or Thali dish exists in the cart
+  useEffect(() => {
+    const hasCurryOrThali = cartItems.some(i => isCurryOrThaliItem(i) && i.quantity > 0);
+    if (!hasCurryOrThali) {
+      const hasOrphanBreads = cartItems.some(i => isBreadOrAddonItem(i));
+      if (hasOrphanBreads) {
+        setCartItems(prev => prev.filter(i => !isBreadOrAddonItem(i)));
+      }
+    }
+  }, [cartItems]);
+
   const addToCart = (item) => {
+    if (isBreadOrAddonItem(item)) {
+      const hasCurryOrThali = cartItems.some(i => isCurryOrThaliItem(i) && i.quantity > 0);
+      if (!hasCurryOrThali) {
+        alert('⚠️ Roti & Breads can only be ordered in a combo with Curry or Thali. Please add a Curry or Thali dish first!');
+        return false;
+      }
+    }
     setCartItems(prev => {
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
@@ -26,6 +45,7 @@ export function CartProvider({ children }) {
       }
       return [...prev, { ...item, quantity: 1 }];
     });
+    return true;
   };
 
   const removeFromCart = (itemId) => {

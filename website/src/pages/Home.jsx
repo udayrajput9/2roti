@@ -464,14 +464,26 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
         </button>
       </div>
 
-      {/* 6. Curry Bread Pairing Callout Banner (Appears when viewing Curry) */}
-      {activeCategory === 'Curry' && (
+      {/* 6. Curry & Thali Bread Pairing Callout Banner */}
+      {(activeCategory === 'Curry' || activeCategory === 'Thali') && (
         <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#221510] via-[#161210] to-[#1E120B] border border-[#FF5722]/40 flex items-center justify-between gap-3 shadow-md">
           <div className="flex items-center gap-3">
             <RotiBreadIcon className="w-8 h-8 shrink-0 drop-shadow-[0_2px_8px_rgba(255,160,0,0.3)]" />
             <div>
-              <h3 className="text-xs font-black text-white">Ordering Curry? Pair with Tandoori Roti & Parathas!</h3>
+              <h3 className="text-xs font-black text-white">Ordering Curry or Thali? Pair with Tandoori Roti & Parathas!</h3>
               <p className="text-[11px] text-neutral-400 font-medium">Add Tandoori Roti (₹8), Lacchha Paratha (₹25) or Chawal Combo (₹30) in your basket.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeCategory === 'Breads' && (
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#221510] via-[#161210] to-[#1E120B] border border-amber-500/40 flex items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-3">
+            <RotiBreadIcon className="w-8 h-8 shrink-0 drop-shadow-[0_2px_8px_rgba(255,160,0,0.3)]" />
+            <div>
+              <h3 className="text-xs font-black text-amber-300">Combo Requirement: Pair with Curry or Thali</h3>
+              <p className="text-[11px] text-neutral-400 font-medium">Tandoori Roti & Breads can only be ordered in a combo with your favorite Curry or Thali dish.</p>
             </div>
           </div>
         </div>

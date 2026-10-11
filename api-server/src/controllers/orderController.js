@@ -81,6 +81,22 @@ async function createOrder(req, res) {
       if (r.key === 'min_wallet_redemption') minWalletRedemption = parseFloat(r.value) || 50.00;
     });
 
+    // Combo requirement helpers
+    const isCurryOrThali = (name = '', cat = '') => {
+      const n = (name || '').toLowerCase();
+      const c = (cat || '').toLowerCase();
+      return c === 'curry' || c === 'thali' || n.includes('curry') || n.includes('kari') || n.includes('thali');
+    };
+    const isBreadOrAddon = (name = '', cat = '', id = 0) => {
+      const n = (name || '').toLowerCase();
+      const c = (cat || '').toLowerCase();
+      const numId = Number(id);
+      return [15, 16, 21].includes(numId) || c === 'breads' || c === 'roti' || n.includes('roti') || n.includes('paratha') || n.includes('naan');
+    };
+
+    let hasCurryOrThaliDish = false;
+    let hasBreadDish = false;
+
     for (const itemInput of items) {
       // O(1) lookup via Map (was O(n) with find())
       const dbItem = dbItemMap.get(itemInput.id);
@@ -97,6 +113,13 @@ async function createOrder(req, res) {
         return res.status(400).json({ success: false, message: `Quantity for "${dbItem.name}" cannot exceed 50.` });
       }
 
+      if (isCurryOrThali(dbItem.name, dbItem.category)) {
+        hasCurryOrThaliDish = true;
+      }
+      if (isBreadOrAddon(dbItem.name, dbItem.category, dbItem.id)) {
+        hasBreadDish = true;
+      }
+
       const custPrice = parseFloat(dbItem.customer_price);
       const vendCost = parseFloat(dbItem.vendor_cost);
 
@@ -109,6 +132,13 @@ async function createOrder(req, res) {
         quantity: qty,
         customer_price: custPrice,
         vendor_cost: vendCost
+      });
+    }
+
+    if (hasBreadDish && !hasCurryOrThaliDish) {
+      return res.status(400).json({
+        success: false,
+        message: 'Roti and bread items can only be ordered as a combo with Curry or Thali. Please add a Curry or Thali dish.'
       });
     }
 
@@ -923,6 +953,430 @@ async function getDailyZonePdf(req, res) {
   }
 }
 
+// 10. Daily Zone Tabular Kitchen Production Sheet (For Kitchen Vendors & Dispatch)
+async function getDailyZoneTable(req, res) {
+  try {
+    const { zone } = req.query;
+    if (!zone) return res.status(400).send('Zone parameter is required (e.g. Buddha, KIPM, ITM).');
+
+    // Get today's start in IST (UTC+5:30)
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+    const startOfIstToday = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0) - istOffset);
+
+    let orders = await db('orders')
+      .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED'])
+      .where('created_at', '>=', startOfIstToday.toISOString())
+      .whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%'])
+      .orderBy('created_at', 'asc');
+
+    let isShowingRecent = false;
+    if (orders.length === 0) {
+      // Fallback to recent orders for testing convenience outside active hours
+      orders = await db('orders')
+        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED'])
+        .whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%'])
+        .orderBy('created_at', 'desc')
+        .limit(25);
+      if (orders.length > 0) {
+        isShowingRecent = true;
+      }
+    }
+
+    if (orders.length === 0) {
+      return res.status(404).send(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>No Orders - ${zone}</title></head>
+        <body style="font-family:system-ui,sans-serif;text-align:center;padding:50px;background:#f8fafc;color:#1e293b;">
+          <h2>No active orders found for zone: ${zone.toUpperCase()}</h2>
+          <p style="color:#64748b;">Orders placed today between 3:00 PM and 6:00 PM IST will appear here automatically.</p>
+        </body>
+        </html>
+      `);
+    }
+
+    const idList = orders.map(o => o.id);
+    const items = await db('order_items').whereIn('order_id', idList);
+    
+    // 1. Calculate Consolidated Dish Totals
+    const itemSummaryMap = new Map();
+    let totalItemsCount = 0;
+    for (const it of items) {
+      const q = parseInt(it.quantity) || 1;
+      totalItemsCount += q;
+      itemSummaryMap.set(it.item_name, (itemSummaryMap.get(it.item_name) || 0) + q);
+    }
+    const consolidatedItems = Array.from(itemSummaryMap.entries()).sort((a, b) => b[1] - a[1]);
+
+    // 2. Group items by order
+    const itemsByOrderMap = new Map();
+    for (const it of items) {
+      if (!itemsByOrderMap.has(it.order_id)) {
+        itemsByOrderMap.set(it.order_id, []);
+      }
+      itemsByOrderMap.get(it.order_id).push(it);
+    }
+
+    // Format IST date display
+    const formattedDate = istNow.toLocaleDateString('en-IN', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <title>Kitchen Tabular Sheet - Zone ${zone.toUpperCase()} (${formattedDate})</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          * { box-sizing: border-box; }
+          body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+            margin: 0;
+            padding: 24px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            padding: 28px;
+            border: 1px solid #e2e8f0;
+          }
+          .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+          }
+          .brand-title {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            color: #ea580c;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .brand-subtitle {
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-top: 2px;
+          }
+          .zone-badge {
+            background: #ea580c;
+            color: #ffffff;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .summary-card {
+            background: #fff7ed;
+            border: 2px solid #ffedd5;
+            border-left: 6px solid #ea580c;
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 28px;
+          }
+          .summary-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #9a3412;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+          .prep-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+          }
+          .prep-item {
+            background: #ffffff;
+            border: 1px solid #fed7aa;
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+          }
+          .prep-item-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+          }
+          .prep-item-qty {
+            font-size: 16px;
+            font-weight: 900;
+            color: #c2410c;
+            background: #ffedd5;
+            padding: 2px 10px;
+            border-radius: 6px;
+          }
+          .table-wrapper {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+          }
+          th {
+            background: #0f172a;
+            color: #ffffff;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            padding: 12px 10px;
+            border-bottom: 2px solid #020617;
+          }
+          td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+          }
+          tr:nth-child(even) td {
+            background: #f8fafc;
+          }
+          tr:hover td {
+            background: #f1f5f9;
+          }
+          .token-badge {
+            font-family: monospace;
+            font-weight: 800;
+            font-size: 14px;
+            color: #ea580c;
+          }
+          .item-chip {
+            display: block;
+            margin-bottom: 3px;
+            font-weight: 600;
+            color: #1e293b;
+          }
+          .item-chip-qty {
+            font-weight: 800;
+            color: #ea580c;
+          }
+          .status-pill {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+          }
+          .status-PLACED { background: #dbeafe; color: #1e40af; }
+          .status-ACCEPTED { background: #e0e7ff; color: #3730a3; }
+          .status-PREPARING { background: #fef3c7; color: #92400e; }
+          .status-READY { background: #dcfce7; color: #166534; }
+          .status-OUT_FOR_DELIVERY { background: #ede9fe; color: #5b21b6; }
+          .status-DELIVERED { background: #bbf7d0; color: #14532d; }
+          .otp-badge {
+            font-family: monospace;
+            font-weight: 800;
+            font-size: 13px;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            letter-spacing: 1px;
+          }
+          .check-box-cell {
+            text-align: center;
+          }
+          .print-check {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #64748b;
+            border-radius: 4px;
+            display: inline-block;
+          }
+          .floating-action {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            gap: 10px;
+          }
+          .btn-print {
+            background: #ea580c;
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(234,88,12,0.4);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .btn-print:hover {
+            background: #c2410c;
+            transform: scale(1.05);
+          }
+          @media print {
+            body { background: #ffffff; padding: 0; }
+            .container { border: none; box-shadow: none; padding: 0; max-width: 100%; }
+            .floating-action { display: none; }
+            tr { page-break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <!-- 1. Sheet Header -->
+          <div class="header-row">
+            <div>
+              <div class="brand-title">
+                <span>2 ROTI</span>
+                <span style="color:#0f172a;font-size:20px;font-weight:700;">| Kitchen Production & Dispatch Sheet</span>
+              </div>
+              <div class="brand-subtitle">
+                Official Campus Dispatch • Gorakhpur • Date: <strong>${formattedDate}</strong>
+                ${isShowingRecent ? ' <span style="color:#b45309;font-weight:bold;">(Showing Recent Orders for Prep Test)</span>' : ''}
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <span class="zone-badge">ZONE: ${zone.toUpperCase()}</span>
+              <div style="font-size:12px;font-weight:700;color:#64748b;margin-top:6px;">
+                Total Orders: <strong>${orders.length}</strong> | Total Items: <strong>${totalItemsCount}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Consolidated Prep Summary (Zero-Mistake Bulk Quantities for Kitchen) -->
+          <div class="summary-card">
+            <div class="summary-title">
+              <span>👨‍🍳 Kitchen Bulk Preparation Summary (Total Quantities To Cook)</span>
+              <span style="font-size:12px;font-weight:700;color:#ea580c;">Zero-Mistake Kitchen Prep</span>
+            </div>
+            <div class="prep-grid">
+              ${consolidatedItems.map(([itemName, qty]) => `
+                <div class="prep-item">
+                  <span class="prep-item-name">${itemName}</span>
+                  <span class="prep-item-qty">${qty}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- 3. Detailed Order-by-Order Table -->
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:35px;text-align:center;">#</th>
+                  <th style="width:110px;">Token</th>
+                  <th style="width:160px;">Customer</th>
+                  <th>Order Items & Qty</th>
+                  <th style="width:150px;">Hostel / Drop Note</th>
+                  <th style="width:90px;">Total</th>
+                  <th style="width:70px;text-align:center;">OTP</th>
+                  <th style="width:90px;text-align:center;">Status</th>
+                  <th style="width:60px;text-align:center;">Packed</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${orders.map((o, idx) => {
+                  const oItems = itemsByOrderMap.get(o.id) || [];
+                  const totPrice = parseFloat(o.total_customer_price || 0) + parseFloat(o.delivery_fee || 0);
+                  const isPaid = (o.payment_status || '').toUpperCase() === 'PAID';
+
+                  return `
+                    <tr>
+                      <td style="text-align:center;font-weight:700;color:#64748b;">${idx + 1}</td>
+                      <td>
+                        <span class="token-badge">${o.order_token}</span>
+                      </td>
+                      <td>
+                        <strong style="color:#0f172a;display:block;">${o.customer_name}</strong>
+                        <span style="color:#64748b;font-size:12px;">📞 ${o.customer_phone || '-'}</span>
+                      </td>
+                      <td>
+                        ${oItems.map(it => `
+                          <span class="item-chip">
+                            <span class="item-chip-qty">${it.quantity}x</span> ${it.item_name}
+                          </span>
+                        `).join('')}
+                      </td>
+                      <td style="font-size:12px;color:#334155;">
+                        <strong>${o.location_name}</strong><br/>
+                        ${o.delivery_address_note ? `<span style="color:#ea580c;">${o.delivery_address_note}</span>` : '<span style="color:#94a3b8;">Main Gate</span>'}
+                      </td>
+                      <td>
+                        <strong style="color:#0f172a;">₹${totPrice.toFixed(0)}</strong>
+                        <div style="font-size:11px;font-weight:700;color:${isPaid ? '#15803d' : '#b45309'};">
+                          ${isPaid ? 'PAID' : 'PENDING'}
+                        </div>
+                      </td>
+                      <td style="text-align:center;">
+                        ${o.delivery_otp ? `<span class="otp-badge">${o.delivery_otp}</span>` : '-'}
+                      </td>
+                      <td style="text-align:center;">
+                        <span class="status-pill status-${o.order_status}">${o.order_status}</span>
+                      </td>
+                      <td class="check-box-cell">
+                        <span class="print-check"></span>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top:20px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:12px;">
+            <span>Generated for 2Roti Campus Delivery Network</span>
+            <span>All food items prepared with highest food safety and hygiene.</span>
+          </div>
+        </div>
+
+        <!-- Floating Print Action Button -->
+        <div class="floating-action">
+          <button class="btn-print" onclick="window.print()">
+            🖨️ Print Kitchen Table (Ctrl + P)
+          </button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html');
+    return res.send(html);
+  } catch (err) {
+    console.error('getDailyZoneTable error:', err);
+    return res.status(500).send('Failed to generate daily zone kitchen table.');
+  }
+}
+
 module.exports = {
   createOrder,
   getCustomerOrders,
@@ -932,5 +1386,6 @@ module.exports = {
   verifyPayment,
   getReceipt,
   getBulkReceipt,
-  getDailyZonePdf
+  getDailyZonePdf,
+  getDailyZoneTable
 };

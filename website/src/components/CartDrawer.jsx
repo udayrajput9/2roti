@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, MapPin, Sparkles, ShieldCheck, Zap } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { FoodClassBadge, RotiBreadIcon } from './FoodIcons';
+import { isCurryOrThaliItem, isBreadOrAddonItem } from '../utils/comboValidation';
 
 const RECOMMENDED_ADDONS = [
   {
@@ -47,12 +48,8 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }) {
 
   if (!isOpen) return null;
 
-  // Check if cart has chicken curry or any other curry dish
-  const hasCurry = cartItems.some(item => {
-    const name = (item.name || '').toLowerCase();
-    const cat = (item.category || '').toLowerCase();
-    return name.includes('curry') || name.includes('kari') || cat === 'curry';
-  });
+  // Check if cart has Curry or Thali dish
+  const hasCurryOrThali = cartItems.some(isCurryOrThaliItem);
 
   const freeDeliveryThreshold = 100;
   const remainingForFreeDelivery = Math.max(0, freeDeliveryThreshold - itemsTotal);
@@ -185,18 +182,18 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }) {
                 );
               })}
 
-              {/* 3. Bread & Combo Suggestions when Curry is in basket */}
-              {hasCurry && (
+              {/* 3. Bread & Combo Suggestions when Curry or Thali is in basket */}
+              {hasCurryOrThali && (
                 <div className="mt-4 p-3.5 rounded-2xl bg-gradient-to-br from-[#221510] via-[#161210] to-[#1E120B] border border-[#FF5722]/40 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
                       <RotiBreadIcon className="w-5 h-5 shrink-0 drop-shadow-[0_2px_6px_rgba(255,160,0,0.3)]" />
                       <h3 className="text-xs font-black text-white tracking-tight">
-                        Pair with your Curry
+                        Pair with your Curry / Thali
                       </h3>
                     </div>
                     <span className="text-[9px] font-black text-[#FF7043] bg-[#FF5722]/15 px-2 py-0.5 rounded-full border border-[#FF5722]/30 uppercase">
-                      Recommended
+                      Recommended Combo
                     </span>
                   </div>
                   <p className="text-[11px] text-neutral-400 mb-2.5 font-medium">
@@ -306,6 +303,10 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }) {
             {/* Checkout CTA */}
             <button
               onClick={() => {
+                if (!hasCurryOrThali && cartItems.some(isBreadOrAddonItem)) {
+                  alert('⚠️ Roti & Breads can only be ordered in a combo with Curry or Thali. Please add a Curry or Thali first!');
+                  return;
+                }
                 onClose();
                 onProceedToCheckout();
               }}

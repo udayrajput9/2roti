@@ -28,7 +28,8 @@ import {
   Eye,
   Filter,
   RefreshCw,
-  Building
+  Building,
+  Table
 } from 'lucide-react';
 import { useLiveOrders } from '../context/LiveOrderContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
@@ -455,38 +456,73 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap self-stretch md:self-auto justify-end">
-            <a
-              href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=Buddha`}
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all"
-            >
-              <span>Buddha Zone PDF</span>
-            </a>
-            <a
-              href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=KIPM`}
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all"
-            >
-              <span>KIPM Zone PDF</span>
-            </a>
-            <a
-              href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=ITM`}
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all"
-            >
-              <span>ITM Zone PDF</span>
-            </a>
-            <button
-              onClick={() => setAutoPdfPending(false)}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80"
-              title="Dismiss"
-            >
-              <X className="w-4 h-4" />
-            </button>
+          <div className="flex flex-col gap-2 self-stretch md:self-auto justify-end">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <a
+                href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=Buddha`}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all"
+              >
+                <span>Buddha PDF</span>
+              </a>
+              <a
+                href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=KIPM`}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all"
+              >
+                <span>KIPM PDF</span>
+              </a>
+              <a
+                href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-pdf?zone=ITM`}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all"
+              >
+                <span>ITM PDF</span>
+              </a>
+              <button
+                onClick={() => setAutoPdfPending(false)}
+                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/80"
+                title="Dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <a
+                href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-table?zone=Buddha`}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all border border-emerald-400/30"
+                title="Buddha Kitchen Tabular Sheet"
+              >
+                <Table className="w-3.5 h-3.5" />
+                <span>Buddha Table</span>
+              </a>
+              <a
+                href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-table?zone=KIPM`}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all border border-teal-400/30"
+                title="KIPM Kitchen Tabular Sheet"
+              >
+                <Table className="w-3.5 h-3.5" />
+                <span>KIPM Table</span>
+              </a>
+              <a
+                href={`${import.meta.env.VITE_API_URL || ''}/api/orders/daily-zone-table?zone=ITM`}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all border border-cyan-400/30"
+                title="ITM Kitchen Tabular Sheet"
+              >
+                <Table className="w-3.5 h-3.5" />
+                <span>ITM Table</span>
+              </a>
+            </div>
           </div>
         </div>
       )}
