@@ -23,7 +23,7 @@ export default function SystemSettings() {
     kitchen_status: 'OPEN',
     kitchen_timing: '11:00 AM - 11:30 PM',
     free_delivery_threshold: '100',
-    delivery_fee: '15',
+    delivery_fee: '10',
     cashback_per_order: '3',
     min_wallet_redemption: '50',
     support_phone: '+91 9999999999',

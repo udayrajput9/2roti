@@ -149,7 +149,8 @@ async function seed() {
     { key: 'CASHBACK_AMOUNT', value: '3.00' },
     { key: 'MIN_WALLET_REDEMPTION', value: '50.00' },
     { key: 'FREE_DELIVERY_THRESHOLD', value: '100.00' },
-    { key: 'DEFAULT_DELIVERY_FEE', value: '15.00' },
+    { key: 'DEFAULT_DELIVERY_FEE', value: '10.00' },
+    { key: 'delivery_fee', value: '10.00' },
     { key: 'STORE_STATUS', value: 'OPEN' }
   ];
 

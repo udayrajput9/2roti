@@ -80,14 +80,18 @@ async function createOrder(req, res) {
     const orderItemsData = [];
     
     // FETCH DYNAMIC SETTINGS FROM DB FOR SECURITY (Instead of hardcoding)
-    const settingsRows = await db('system_settings').whereIn('key', ['free_delivery_threshold', 'delivery_fee', 'min_wallet_redemption']);
-    let freeThreshold = 100;
-    let baseDeliveryFee = 15;
-    let minWalletRedemption = 50.00;
+    const settingsRows = await db('system_settings').whereIn('key', [
+      'free_delivery_threshold', 'FREE_DELIVERY_THRESHOLD',
+      'delivery_fee', 'DEFAULT_DELIVERY_FEE',
+      'min_wallet_redemption', 'MIN_WALLET_REDEMPTION'
+    ]);
+    let freeThreshold = parseFloat(process.env.FREE_DELIVERY_THRESHOLD || 100);
+    let baseDeliveryFee = parseFloat(process.env.DEFAULT_DELIVERY_FEE || 10);
+    let minWalletRedemption = parseFloat(process.env.MIN_WALLET_REDEMPTION || 50.00);
     settingsRows.forEach(r => {
-      if (r.key === 'free_delivery_threshold') freeThreshold = parseFloat(r.value);
-      if (r.key === 'delivery_fee') baseDeliveryFee = parseFloat(r.value);
-      if (r.key === 'min_wallet_redemption') minWalletRedemption = parseFloat(r.value) || 50.00;
+      if (r.key === 'free_delivery_threshold' || r.key === 'FREE_DELIVERY_THRESHOLD') freeThreshold = parseFloat(r.value);
+      if (r.key === 'delivery_fee' || r.key === 'DEFAULT_DELIVERY_FEE') baseDeliveryFee = parseFloat(r.value);
+      if (r.key === 'min_wallet_redemption' || r.key === 'MIN_WALLET_REDEMPTION') minWalletRedemption = parseFloat(r.value) || 50.00;
     });
 
     // Combo requirement helpers

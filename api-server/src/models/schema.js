@@ -42,8 +42,23 @@ async function ensureOrderChatsTable() {
   }
 }
 
+async function ensureSystemSettingsDefaults() {
+  try {
+    const hasTable = await db.schema.hasTable('system_settings');
+    if (hasTable) {
+      await db('system_settings')
+        .whereIn('key', ['delivery_fee', 'DEFAULT_DELIVERY_FEE'])
+        .whereIn('value', ['15', '15.00'])
+        .update({ value: '10.00', updated_at: db.fn.now() });
+    }
+  } catch (err) {
+    console.warn('ensureSystemSettingsDefaults check warning:', err.message);
+  }
+}
+
 async function initSchema() {
   await ensureOrderChatsTable();
+  await ensureSystemSettingsDefaults();
   // Fast-path: If core tables already exist, skip redundant DDL checks for ultra-fast startup (<100ms)
   try {
     const hasCore = await db.schema.hasTable('menu_items');

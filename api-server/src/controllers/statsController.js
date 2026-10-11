@@ -109,11 +109,13 @@ async function updateSystemSettings(req, res) {
 async function getPublicSettings(req, res) {
   try {
     const rows = await db('system_settings').select('key', 'value');
+    const defaultDeliveryFee = String(parseFloat(process.env.DEFAULT_DELIVERY_FEE || 10));
+    const defaultThreshold = String(parseFloat(process.env.FREE_DELIVERY_THRESHOLD || 100));
     const settings = {
       kitchen_status: 'OPEN',
       kitchen_timing: '11:00 AM - 11:30 PM',
-      free_delivery_threshold: '100',
-      delivery_fee: '15',
+      free_delivery_threshold: defaultThreshold,
+      delivery_fee: defaultDeliveryFee,
       cashback_per_order: '3'
     };
     rows.forEach(r => {
@@ -125,6 +127,14 @@ async function getPublicSettings(req, res) {
         }
       } catch(e) { settings[r.key] = r.value; }
     });
+
+    // Alias mapping for compatibility between DEFAULT_DELIVERY_FEE and delivery_fee
+    if (settings.DEFAULT_DELIVERY_FEE && (!settings.delivery_fee || settings.delivery_fee === '15')) {
+      settings.delivery_fee = String(parseFloat(settings.DEFAULT_DELIVERY_FEE));
+    }
+    if (settings.FREE_DELIVERY_THRESHOLD && !settings.free_delivery_threshold) {
+      settings.free_delivery_threshold = String(parseFloat(settings.FREE_DELIVERY_THRESHOLD));
+    }
     return res.json({ success: true, settings });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to fetch public settings.' });

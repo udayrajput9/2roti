@@ -70,7 +70,7 @@ export function CartProvider({ children }) {
     setCartItems([]);
   };
 
-  const [sysSettings, setSysSettings] = useState({ delivery_fee: 15, free_delivery_threshold: 100 });
+  const [sysSettings, setSysSettings] = useState({ delivery_fee: 10, free_delivery_threshold: 100 });
 
   useEffect(() => {
     fetch('/api/settings')
@@ -79,7 +79,7 @@ export function CartProvider({ children }) {
         if (d.success && d.settings) {
           setSysSettings({
             ...d.settings,
-            delivery_fee: parseFloat(d.settings.delivery_fee) || 15,
+            delivery_fee: parseFloat(d.settings.delivery_fee) || 10,
             free_delivery_threshold: parseFloat(d.settings.free_delivery_threshold) || 100,
           });
         }

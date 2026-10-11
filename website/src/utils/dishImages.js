@@ -15,6 +15,7 @@ export const DISH_IMAGES = {
   'chicken curry': '/images/food/chicken_curry.webp',
   'chicken kari': '/images/food/chicken_kari.webp',
   'vegetable curry': '/images/food/vegetable_curry.webp',
+  'veg curry': '/images/food/veg_curry.webp',
   'paneer curry': '/images/food/paneer_curry.webp',
   'mattar panner': '/images/food/mattar_paneer.webp',
   'special paneer do pyaza': '/images/food/special_paneer_do_pyaza.webp',
