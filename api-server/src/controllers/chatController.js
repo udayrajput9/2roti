@@ -83,6 +83,8 @@ async function getOrderMessages(req, res) {
       order: {
         id: order.id,
         order_token: order.order_token,
+        customer_name: order.customer_name,
+        delivery_otp: order.delivery_otp,
         order_status: order.order_status,
         total_customer_price: order.total_customer_price,
         location_name: order.location_name,

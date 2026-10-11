@@ -11,7 +11,8 @@ import {
   ChevronDown,
   Sparkles,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  QrCode
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -116,6 +117,36 @@ export default function ChatPage({ onOpenAuth, onNavigateToTab }) {
       }
     } catch (e) {
       console.error('Send message error:', e);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleShareDeliveryQr = async () => {
+    if (!selectedOrderId || !selectedOrder || sending) return;
+    const token = selectedOrder.order_token;
+    const secret = selectedOrder.delivery_otp || '';
+    const customer = selectedOrder.customer_name || user?.name || 'Customer';
+
+    const qrPayload = JSON.stringify({ token, secret, customer });
+    const text = `[DELIVERY_QR_CODE]\nOrder: ${token}\nSecret Code: ${secret}\nPayload: ${qrPayload}`;
+
+    setSending(true);
+    try {
+      const res = await fetch(`/api/chat/customer/order/${selectedOrderId}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.message) {
+          setMessages(prev => [...prev, data.message]);
+        }
+      }
+    } catch (e) {
+      console.error('Share QR error:', e);
     } finally {
       setSending(false);
     }
@@ -307,13 +338,49 @@ export default function ChatPage({ onOpenAuth, onNavigateToTab }) {
                     {isMine ? 'You' : `2Roti Support (${msg.sender_name})`}
                   </div>
                   <div
-                    className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed shadow-sm ${
+                    className={`max-w-[85%] rounded-2xl p-2.5 text-xs leading-relaxed shadow-sm ${
                       isMine
                         ? 'bg-gradient-to-r from-[#FF5722] to-[#E64A19] text-white rounded-br-none'
                         : 'bg-[#1E1E1E] border border-neutral-700/80 text-neutral-100 rounded-bl-none'
                     }`}
                   >
-                    {msg.message}
+                    {msg.message.includes('[DELIVERY_QR_CODE]') ? (
+                      <div className="bg-[#141414] border border-amber-500/40 rounded-2xl p-3 text-center space-y-2 text-white">
+                        <div className="flex items-center justify-center gap-1.5 text-amber-400 text-[11px] font-black uppercase tracking-wider">
+                          <QrCode className="w-3.5 h-3.5" />
+                          <span>Delivery QR & Secret Code</span>
+                        </div>
+                        <div className="bg-white p-2 rounded-xl inline-block mx-auto shadow-md">
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                              msg.message.includes('Payload: ')
+                                ? msg.message.split('Payload: ')[1]
+                                : selectedOrder?.order_token || ''
+                            )}`}
+                            alt="Delivery QR"
+                            className="w-28 h-28 mx-auto"
+                          />
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-black text-white">
+                            {selectedOrder?.customer_name || 'Campus Student'}
+                          </div>
+                          <div className="text-[11px] font-bold text-amber-400">
+                            {msg.message.match(/Order: (.*?)(?:\n|$)/)?.[1] || selectedOrder?.order_token}
+                          </div>
+                          {msg.message.match(/Secret Code: (.*?)(?:\n|$)/)?.[1] && (
+                            <div className="bg-amber-950/80 border border-amber-700/60 rounded-lg py-0.5 px-2 text-xs font-black tracking-widest text-amber-200 mt-1">
+                              OTP: {msg.message.match(/Secret Code: (.*?)(?:\n|$)/)?.[1]}
+                            </div>
+                          )}
+                          <div className="text-[9px] text-neutral-400 pt-1">
+                            Show this to campus delivery runner at 8:00 PM
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="px-1.5 py-0.5">{msg.message}</div>
+                    )}
                   </div>
                   <span className="text-[9px] text-neutral-500 mt-1 px-1">
                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -327,6 +394,14 @@ export default function ChatPage({ onOpenAuth, onNavigateToTab }) {
 
         {/* Quick Suggestion Chips */}
         <div className="px-3 py-1.5 bg-[#161616] border-t border-neutral-800 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+          <button
+            type="button"
+            onClick={handleShareDeliveryQr}
+            className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-600/30 to-orange-600/30 border border-amber-500/50 hover:bg-amber-600/40 text-[10px] text-amber-300 font-bold whitespace-nowrap flex items-center gap-1 transition-all active:scale-95"
+          >
+            <QrCode className="w-3 h-3 text-amber-400" />
+            <span>📲 Share Delivery QR Code</span>
+          </button>
           {[
             'Where is my delivery runner?',
             'Please call me once you reach gate.',
@@ -346,6 +421,14 @@ export default function ChatPage({ onOpenAuth, onNavigateToTab }) {
 
         {/* Message Input Box */}
         <form onSubmit={handleSendMessage} className="p-3 bg-[#161616] border-t border-neutral-800 flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleShareDeliveryQr}
+            title="Share Delivery QR Code with Support Agent"
+            className="p-2.5 rounded-2xl bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 hover:text-white transition-all active:scale-95 shrink-0 flex items-center justify-center"
+          >
+            <QrCode className="w-4 h-4 text-amber-400" />
+          </button>
           <input
             type="text"
             value={inputText}
