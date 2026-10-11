@@ -8,7 +8,21 @@ export function LiveOrderProvider({ children }) {
   const [orders, setOrders] = useState([]);
   const [lastAlert, setLastAlert] = useState(null);
   const [connected, setConnected] = useState(false);
+  const [isPaymentsStopped, setIsPaymentsStopped] = useState(false);
   const socketRef = useRef(null);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.settings) {
+          const isHalt = data.settings.emergency_stop_payments === 'true' || data.settings.kitchen_status === 'STOPPED';
+          setIsPaymentsStopped(isHalt);
+        }
+      }
+    } catch (e) {}
+  };
 
   // Audio Chime synthesizer using Web Audio API
   const playAlertChime = () => {
@@ -66,6 +80,7 @@ export function LiveOrderProvider({ children }) {
   useEffect(() => {
     if (!isAuthenticated) return;
     fetchOrders();
+    fetchSettings();
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
@@ -94,6 +109,8 @@ export function LiveOrderProvider({ children }) {
           setOrders(prev => [msg.data, ...prev]);
         } else if (msg.type === 'ORDER_STATUS_CHANGED') {
           setOrders(prev => prev.map(o => o.id === msg.data.id ? { ...o, ...msg.data } : o));
+        } else if (msg.type === 'EMERGENCY_HALT_CHANGED') {
+          setIsPaymentsStopped(msg.data?.is_stopped ?? false);
         }
       } catch (err) {
         console.error('WebSocket parse error:', err);
@@ -204,6 +221,65 @@ export function LiveOrderProvider({ children }) {
     }
   };
 
+  const bulkCancelZone = async (zone, reason) => {
+    try {
+      const res = await fetch('/api/orders/bulk-cancel-zone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zone, reason })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Bulk cancellation failed.');
+      }
+      if (data.orders && Array.isArray(data.orders)) {
+        const updatedMap = new Map(data.orders.map(o => [o.id, o]));
+        setOrders(prev => prev.map(o => updatedMap.get(o.id) || o));
+      }
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const cancelOrderWithRefund = async (orderId, reason) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/cancel-refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Order cancellation failed.');
+      }
+      if (data.order) {
+        setOrders(prev => prev.map(o => o.id === orderId ? data.order : o));
+      }
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const toggleStopPayments = async (targetState) => {
+    try {
+      const res = await fetch('/api/admin/toggle-stop-payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stop: targetState })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to toggle emergency stop.');
+      }
+      setIsPaymentsStopped(data.is_stopped);
+      return data;
+    } catch (err) {
+      throw err;
+    }
+  };
+
   return (
     <LiveOrderContext.Provider
       value={{
@@ -217,6 +293,10 @@ export function LiveOrderProvider({ children }) {
         verifyPayment,
         bulkAcceptZone,
         dispatchZone,
+        bulkCancelZone,
+        cancelOrderWithRefund,
+        isPaymentsStopped,
+        toggleStopPayments,
         refreshOrders: fetchOrders
       }}
     >

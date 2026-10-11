@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, ShieldCheck } from 'lucide-react';
+import { Lock, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { isCurryOrThaliItem, isBreadOrAddonItem } from '../utils/comboValidation';
@@ -14,11 +14,23 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
   const [hpTrap, setHpTrap] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isHalted, setIsHalted] = useState(false);
   const [idempotencyKey] = useState(() => Math.random().toString(36).substring(2, 15) + Date.now().toString(36));
 
   const chosenLocation = activeLocation || locations[0];
 
   useEffect(() => {
+    // Check if kitchen/admin has stopped payments & orders
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.settings) {
+          const halted = d.settings.emergency_stop_payments === 'true' || d.settings.kitchen_status === 'STOPPED';
+          setIsHalted(halted);
+        }
+      })
+      .catch(() => {});
+
     // Dynamically load Razorpay SDK
     if (!document.getElementById('razorpay-sdk')) {
       const script = document.createElement('script');
@@ -30,6 +42,12 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
   }, []);
 
   const handlePlaceOrder = async () => {
+    // Emergency Killswitch check
+    if (isHalted) {
+      setError('Online orders and payments have been temporarily stopped by kitchen administration.');
+      return;
+    }
+
     // IST time check: allow payment only between 15:00-18:00 IST
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000;
@@ -215,14 +233,28 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
 
       <input type="text" name="_hp_trap" value={hpTrap} onChange={(e) => setHpTrap(e.target.value)} tabIndex={-1} autoComplete="off" className="hidden" />
 
+      {/* Emergency Halt Notice */}
+      {isHalted && (
+        <div className="p-3.5 rounded-2xl bg-rose-950/90 border border-rose-500/70 text-rose-200 text-xs font-bold flex items-center gap-2.5 shadow-lg">
+          <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+          <span>Kitchen administration has temporarily stopped online payments and order placements. Checkout is paused.</span>
+        </div>
+      )}
+
       {/* 3. Place Order CTA */}
       <button
         onClick={handlePlaceOrder}
-        disabled={loading}
-        className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#F4511E] hover:to-[#D84315] text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_8px_28px_rgba(255,87,34,0.4)] active:scale-95 disabled:opacity-50 transition-all group"
+        disabled={loading || isHalted}
+        className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_8px_28px_rgba(255,87,34,0.4)] active:scale-95 disabled:opacity-50 transition-all group ${
+          isHalted
+            ? 'bg-neutral-800 text-neutral-400 cursor-not-allowed border border-neutral-700'
+            : 'bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#F4511E] hover:to-[#D84315] text-white'
+        }`}
       >
         {loading ? (
           <span className="animate-pulse">Processing Payment...</span>
+        ) : isHalted ? (
+          <span>⛔ Ordering & Payments Temporarily Paused</span>
         ) : (
           <>
             <Lock className="w-4 h-4" />

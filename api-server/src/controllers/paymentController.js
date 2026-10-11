@@ -19,6 +19,15 @@ async function createRazorpayOrder(req, res) {
       return res.status(400).json({ success: false, message: 'Valid amount is required.' });
     }
 
+    // Emergency Killswitch Check: Block payment creation if payments/orders are stopped
+    const haltRow = await db('system_settings').where({ key: 'emergency_stop_payments' }).first();
+    if (haltRow && haltRow.value === 'true') {
+      return res.status(403).json({
+        success: false,
+        message: 'Online payment collection is currently stopped by the kitchen management.'
+      });
+    }
+
     // Only mock if keys are the hardcoded demo keys, otherwise create real order
     let rzpOrderId;
     if (RAZORPAY_KEY_ID === 'rzp_test_2rotiDemoKey123') {

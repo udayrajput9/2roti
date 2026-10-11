@@ -131,9 +131,60 @@ async function getPublicSettings(req, res) {
   }
 }
 
+// 5. Emergency Killswitch: Stop / Resume Payments & Orders
+async function toggleStopPayments(req, res) {
+  try {
+    const { stop } = req.body; // boolean
+    let shouldStop = stop;
+    if (shouldStop === undefined) {
+      const row = await db('system_settings').where({ key: 'emergency_stop_payments' }).first();
+      shouldStop = !(row && row.value === 'true');
+    }
+
+    const valStr = shouldStop ? 'true' : 'false';
+    const kitchenVal = shouldStop ? 'STOPPED' : 'OPEN';
+
+    await db.transaction(async (trx) => {
+      // 1. emergency_stop_payments
+      const ex1 = await trx('system_settings').where({ key: 'emergency_stop_payments' }).first();
+      if (ex1) {
+        await trx('system_settings').where({ key: 'emergency_stop_payments' }).update({ value: valStr, updated_at: db.fn.now() });
+      } else {
+        await trx('system_settings').insert({ key: 'emergency_stop_payments', value: valStr });
+      }
+
+      // 2. kitchen_status
+      const ex2 = await trx('system_settings').where({ key: 'kitchen_status' }).first();
+      if (ex2) {
+        await trx('system_settings').where({ key: 'kitchen_status' }).update({ value: kitchenVal, updated_at: db.fn.now() });
+      } else {
+        await trx('system_settings').insert({ key: 'kitchen_status', value: kitchenVal });
+      }
+    });
+
+    const { broadcastOrderEvent } = require('../services/socketService');
+    try {
+      broadcastOrderEvent('EMERGENCY_HALT_CHANGED', { is_stopped: shouldStop, kitchen_status: kitchenVal });
+    } catch(e) {}
+
+    return res.json({
+      success: true,
+      is_stopped: shouldStop,
+      kitchen_status: kitchenVal,
+      message: shouldStop
+        ? '🛑 Emergency Halt Activated: All online payments & orders are now completely STOPPED.'
+        : '🟢 Payments & orders have been RESUMED. Kitchen is now accepting orders.'
+    });
+  } catch (err) {
+    console.error('toggleStopPayments error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to toggle emergency payment stop.' });
+  }
+}
+
 module.exports = {
   getDashboardStats,
   getSystemSettings,
   updateSystemSettings,
-  getPublicSettings
+  getPublicSettings,
+  toggleStopPayments
 };

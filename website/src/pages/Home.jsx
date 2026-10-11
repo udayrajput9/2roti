@@ -348,6 +348,13 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
         </div>
       )}
 
+      {/* Emergency Halt Banner if Killswitch is active */}
+      {(sysSettings?.emergency_stop_payments === 'true' || sysSettings?.kitchen_status === 'STOPPED') && (
+        <div className="bg-rose-950/80 border border-rose-500/80 rounded-2xl p-3.5 flex items-center justify-center gap-2 text-rose-200 text-xs sm:text-sm font-black shadow-lg animate-pulse">
+          <span>🛑 KITCHEN PAUSED: Online orders & payments are currently stopped by admin</span>
+        </div>
+      )}
+
       {/* Time Notice Banner */}
       <div className="bg-amber-950/60 border border-amber-500/50 rounded-2xl p-3 flex items-center justify-center gap-2 text-amber-300 text-xs sm:text-sm font-black shadow-md">
         <span>⏰ Orders accepted: 3 PM – 6 PM IST only</span>

@@ -22,6 +22,15 @@ async function createOrder(req, res) {
       }
     }
 
+    // Emergency Killswitch Check: Block orders if kitchen payments/ordering is stopped
+    const haltRow = await db('system_settings').where({ key: 'emergency_stop_payments' }).first();
+    if (haltRow && haltRow.value === 'true') {
+      return res.status(403).json({
+        success: false,
+        message: 'Kitchen is currently not accepting new orders or payments. Orders are temporarily stopped.'
+      });
+    }
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: 'Cart items cannot be empty.' });
     }
@@ -1528,6 +1537,171 @@ async function dispatchZone(req, res) {
   }
 }
 
+// Helper: Perform Razorpay or Wallet Refund for an order
+async function executeRefundForOrder(order, reason, staffEmail) {
+  const refundAmount = parseFloat(order.total_customer_price) + parseFloat(order.delivery_fee || 0);
+  let refundResult = { success: true, refund_id: null, method: order.payment_source, amount: refundAmount };
+
+  if (order.payment_status === 'PAID' && refundAmount > 0) {
+    // A. Razorpay Refund
+    if (order.payment_source === 'razorpay' && order.razorpay_payment_id) {
+      const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_2rotiDemoKey123';
+      const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_2rotiDemoSecret456';
+      
+      if (RAZORPAY_KEY_ID !== 'rzp_test_2rotiDemoKey123') {
+        const Razorpay = require('razorpay');
+        const rzp = new Razorpay({ key_id: RAZORPAY_KEY_ID, key_secret: RAZORPAY_KEY_SECRET });
+        try {
+          const rzpRes = await rzp.payments.refund(order.razorpay_payment_id, {
+            amount: Math.round(refundAmount * 100), // in paise
+            speed: 'normal',
+            notes: {
+              order_token: order.order_token,
+              reason: reason || 'Kitchen order cancelled',
+              cancelled_by: staffEmail || 'admin'
+            }
+          });
+          refundResult.refund_id = rzpRes.id;
+          refundResult.status = rzpRes.status || 'processed';
+        } catch (rzpErr) {
+          console.error(`Razorpay refund error for ${order.order_token}:`, rzpErr.message || rzpErr);
+          refundResult.refund_id = `FAILED: ${rzpErr.error?.description || rzpErr.message || 'Razorpay Gateway Error'}`;
+          refundResult.gateway_error = true;
+        }
+      } else {
+        refundResult.refund_id = `rfnd_mock_${Date.now()}`;
+        refundResult.status = 'processed';
+      }
+    }
+    // B. Wallet Refund
+    else if (order.payment_source === 'wallet') {
+      const customer = await db('users').where({ id: order.user_id }).first();
+      const currentBal = parseFloat(customer?.wallet_balance || 0);
+      const newBalance = currentBal + refundAmount;
+      await db('users').where({ id: order.user_id }).update({ wallet_balance: newBalance });
+      await db('wallet_transactions').insert({
+        user_id: order.user_id,
+        type: 'order_refund_credit',
+        amount: refundAmount,
+        related_order_id: order.id,
+        balance_after: newBalance,
+        note: `Refund for cancelled order ${order.order_token}: ${reason || 'Kitchen cancelled'}`
+      });
+      refundResult.refund_id = `wallet_credit_${Date.now()}`;
+    }
+  }
+
+  // Update order status in DB
+  const updatePayload = {
+    order_status: 'CANCELLED',
+    payment_status: order.payment_status === 'PAID' ? 'REFUNDED' : 'CANCELLED',
+    updated_at: db.fn.now()
+  };
+  
+  if (refundResult.refund_id) {
+    const existingNote = order.delivery_address_note || '';
+    updatePayload.delivery_address_note = `${existingNote} [Refund: ₹${refundAmount.toFixed(2)} via ${order.payment_source} (ID: ${refundResult.refund_id})]`.trim().substring(0, 200);
+  }
+
+  await db('orders').where({ id: order.id }).update(updatePayload);
+
+  const updated = await db('orders').where({ id: order.id }).first();
+  const items = await db('order_items').where({ order_id: order.id });
+  updated.items = items;
+  broadcastOrderEvent('ORDER_STATUS_CHANGED', updated);
+
+  return { order: updated, refund: refundResult };
+}
+
+// 13. Bulk Cancel Zone Orders with Automated Razorpay / Wallet Refunds
+async function bulkCancelZone(req, res) {
+  try {
+    const { zone, reason } = req.body;
+    if (!zone) {
+      return res.status(400).json({ success: false, message: 'Zone is required.' });
+    }
+
+    const staffEmail = req.staff?.email || 'admin';
+    let query = db('orders')
+      .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
+      .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
+
+    if (zone !== 'ALL') {
+      query = query.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
+    }
+
+    let ordersToCancel = [];
+    try {
+      ordersToCancel = await query;
+    } catch(e) {
+      let fallback = db('orders').whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY']);
+      if (zone !== 'ALL') {
+        fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
+      }
+      ordersToCancel = await fallback;
+    }
+
+    if (ordersToCancel.length === 0) {
+      return res.json({ success: true, count: 0, message: `No active orders found to cancel for ${zone}.`, orders: [] });
+    }
+
+    const results = [];
+    let totalRefunded = 0;
+
+    for (const ord of ordersToCancel) {
+      const resData = await executeRefundForOrder(ord, reason || `Kitchen cancelled ${zone} batch`, staffEmail);
+      results.push(resData.order);
+      if (resData.refund?.amount && resData.order.payment_status === 'REFUNDED') {
+        totalRefunded += resData.refund.amount;
+      }
+    }
+
+    return res.json({
+      success: true,
+      count: results.length,
+      total_refunded: totalRefunded,
+      message: `Cancelled ${results.length} orders for ${zone}. Refunds totaling ₹${totalRefunded.toFixed(2)} initiated!`,
+      orders: results
+    });
+  } catch (err) {
+    console.error('bulkCancelZone error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to bulk cancel orders.' });
+  }
+}
+
+// 14. Cancel Single Order with Razorpay / Wallet Refund
+async function cancelOrderWithRefund(req, res) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const staffEmail = req.staff?.email || 'admin';
+
+    const order = await db('orders').where({ id }).first();
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    if (['DELIVERED', 'REFUNDED', 'CANCELLED'].includes(order.order_status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel order with status ${order.order_status}.`
+      });
+    }
+
+    const { order: updatedOrder, refund } = await executeRefundForOrder(order, reason, staffEmail);
+
+    return res.json({
+      success: true,
+      message: `Order ${updatedOrder.order_token} cancelled. Refund of ₹${refund.amount?.toFixed(2) || '0.00'} initiated.`,
+      order: updatedOrder,
+      refund
+    });
+  } catch (err) {
+    console.error('cancelOrderWithRefund error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to cancel order.' });
+  }
+}
+
 module.exports = {
   createOrder,
   getCustomerOrders,
@@ -1540,5 +1714,7 @@ module.exports = {
   getDailyZonePdf,
   getDailyZoneTable,
   bulkAcceptZone,
-  dispatchZone
+  dispatchZone,
+  bulkCancelZone,
+  cancelOrderWithRefund
 };

@@ -41,6 +41,7 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
     updateOrderStatus,
     assignRunner,
     verifyPayment,
+    cancelOrderWithRefund,
     lastAlert,
     dismissAlert,
     playAlertChime,
@@ -247,6 +248,16 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
   const handleStatusChange = async (orderId, nextStatus) => {
     try {
       setLoadingAction(true);
+      if (nextStatus === 'CANCELLED') {
+        const reason = window.prompt("Reason for cancellation / rejection (sent with Razorpay refund notes):", "Kitchen order cancelled");
+        if (reason === null) {
+          setLoadingAction(false);
+          return;
+        }
+        const res = await cancelOrderWithRefund(orderId, reason.trim() || 'Kitchen rejected');
+        alert(res.message || 'Order cancelled and refund initiated.');
+        return;
+      }
       await updateOrderStatus(orderId, nextStatus);
     } catch (e) {
       alert(e.message || 'Status update error');

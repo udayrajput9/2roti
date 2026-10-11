@@ -7,20 +7,32 @@ import {
   Phone,
   Sparkles,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Send,
   Zap,
   Building,
-  ShieldCheck
+  ShieldCheck,
+  XCircle,
+  Power,
+  RotateCcw
 } from 'lucide-react';
 import { useLiveOrders } from '../context/LiveOrderContext';
 
 export default function CampusOperationsControl() {
-  const { orders, bulkAcceptZone, dispatchZone, updateOrderStatus } = useLiveOrders();
+  const {
+    orders,
+    bulkAcceptZone,
+    dispatchZone,
+    bulkCancelZone,
+    isPaymentsStopped,
+    toggleStopPayments
+  } = useLiveOrders();
 
   const [currentTimeStr, setCurrentTimeStr] = useState('');
   const [totalIstMinutes, setTotalIstMinutes] = useState(0);
   const [loadingZone, setLoadingZone] = useState('');
+  const [loadingKillswitch, setLoadingKillswitch] = useState(false);
   const [runnerMode, setRunnerMode] = useState('AUTO'); // 'AUTO' | 'MANUAL'
   const [manualRunnerName, setManualRunnerName] = useState('');
   const [manualRunnerPhone, setManualRunnerPhone] = useState('9876543210');
@@ -56,10 +68,10 @@ export default function CampusOperationsControl() {
   // Calculate zone stats
   const zoneStats = useMemo(() => {
     const stats = {
-      buddha: { placed: 0, dispatchable: 0, delivered: 0 },
-      kipm: { placed: 0, dispatchable: 0, delivered: 0 },
-      itm: { placed: 0, dispatchable: 0, delivered: 0 },
-      all: { placed: 0, dispatchable: 0, delivered: 0 }
+      buddha: { placed: 0, active: 0, delivered: 0 },
+      kipm: { placed: 0, active: 0, delivered: 0 },
+      itm: { placed: 0, active: 0, delivered: 0 },
+      all: { placed: 0, active: 0, delivered: 0 }
     };
 
     orders.forEach((o) => {
@@ -75,8 +87,8 @@ export default function CampusOperationsControl() {
         stats.all.placed++;
       }
       if (['PLACED', 'ACCEPTED', 'PREPARING', 'READY'].includes(o.order_status)) {
-        if (key) stats[key].dispatchable++;
-        stats.all.dispatchable++;
+        if (key) stats[key].active++;
+        stats.all.active++;
       }
       if (o.order_status === 'DELIVERED') {
         if (key) stats[key].delivered++;
@@ -86,6 +98,27 @@ export default function CampusOperationsControl() {
 
     return stats;
   }, [orders]);
+
+  // Emergency Killswitch: Toggle Stop / Resume Payments
+  const handleToggleKillswitch = async () => {
+    const targetState = !isPaymentsStopped;
+    const confirmPrompt = targetState
+      ? '⚠️ ARE YOU SURE you want to STOP ALL ORDERS & PAYMENTS?\n\nCustomers will be immediately blocked from paying or creating orders.'
+      : '✅ Resume online orders and payments?\n\nCustomers will be allowed to checkout again.';
+    
+    if (!window.confirm(confirmPrompt)) return;
+
+    try {
+      setLoadingKillswitch(true);
+      const res = await toggleStopPayments(targetState);
+      setActionSuccessMsg(res.message);
+      setTimeout(() => setActionSuccessMsg(''), 6000);
+    } catch (e) {
+      alert(e.message || 'Error updating emergency killswitch');
+    } finally {
+      setLoadingKillswitch(false);
+    }
+  };
 
   // Handle Zone Bulk Accept (Active at 6:10 PM IST)
   const handleZoneAccept = async (zone) => {
@@ -103,6 +136,36 @@ export default function CampusOperationsControl() {
       setTimeout(() => setActionSuccessMsg(''), 5000);
     } catch (e) {
       alert(e.message || 'Error accepting orders');
+    } finally {
+      setLoadingZone('');
+    }
+  };
+
+  // Handle Zone Bulk Cancel & Automated Refund (Razorpay / Wallet)
+  const handleZoneCancel = async (zone) => {
+    const targetCount = zone === 'ALL' ? zoneStats.all.active : (zoneStats[zone.toLowerCase()]?.active || 0);
+    if (targetCount === 0) {
+      alert(`No active orders to cancel for ${zone}.`);
+      return;
+    }
+
+    const proceed = window.confirm(
+      `⚠️ CANCEL & REFUND CONFIRMATION:\n\nAre you sure you want to CANCEL all ${targetCount} active orders for ${zone}?\n\nThis will AUTOMATICALLY trigger Razorpay refunds for online payments and credit wallets immediately!`
+    );
+    if (!proceed) return;
+
+    const reason = window.prompt('Enter cancellation reason (sent to customer & Razorpay notes):', 'Kitchen operations cancelled by admin');
+    if (reason === null) return; // User pressed cancel on prompt
+
+    try {
+      setLoadingZone(`cancel_${zone}`);
+      const res = await bulkCancelZone(zone, reason.trim() || 'Kitchen batch cancellation');
+      setActionSuccessMsg(
+        `❌ Cancelled ${res.count || 0} orders for ${zone}! Total Refunds of ₹${parseFloat(res.total_refunded || 0).toFixed(2)} automatically initiated via Razorpay/Wallet!`
+      );
+      setTimeout(() => setActionSuccessMsg(''), 7000);
+    } catch (e) {
+      alert(e.message || 'Error cancelling orders');
     } finally {
       setLoadingZone('');
     }
@@ -148,7 +211,7 @@ export default function CampusOperationsControl() {
   return (
     <div className="bg-[#101726] border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-6">
       
-      {/* Header Bar with Clock and Live Status */}
+      {/* Top Header Bar with Clock and Live Status */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#FF5722] to-amber-600 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
@@ -159,7 +222,7 @@ export default function CampusOperationsControl() {
               Campus Operations Command Center
             </h2>
             <p className="text-xs text-slate-400">
-              Automated 6:10 PM order acceptance & 7:30 PM campus runner dispatch pipeline
+              Automated 6:10 PM order acceptance, Razorpay cancellations & 7:30 PM runner dispatch pipeline
             </p>
           </div>
         </div>
@@ -171,6 +234,58 @@ export default function CampusOperationsControl() {
             <span>{currentTimeStr || 'Loading IST...'}</span>
           </div>
         </div>
+      </div>
+
+      {/* EMERGENCY KILLSWITCH BANNER (Stop All Orders & Payments) */}
+      <div className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+        isPaymentsStopped
+          ? 'bg-rose-950/80 border-rose-500/70 shadow-lg shadow-rose-950/50'
+          : 'bg-slate-900/80 border-slate-700/70'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+            isPaymentsStopped
+              ? 'bg-rose-500 text-white animate-pulse'
+              : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+          }`}>
+            <Power className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs sm:text-sm font-black text-white uppercase tracking-wider">
+                {isPaymentsStopped
+                  ? '🛑 EMERGENCY HALT ACTIVE: Orders & Payments Stopped'
+                  : '🟢 Online Ordering & Payment Gateways are LIVE'}
+              </span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                isPaymentsStopped
+                  ? 'bg-rose-500 text-white'
+                  : 'bg-emerald-950 text-emerald-400 border border-emerald-700'
+              }`}>
+                {isPaymentsStopped ? 'HALTED' : 'ACCEPTING'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              {isPaymentsStopped
+                ? 'All checkout payments & new order placements are blocked across website and app.'
+                : 'Students can place orders and make Razorpay online payments during kitchen hours.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Killswitch Action Button */}
+        <button
+          onClick={handleToggleKillswitch}
+          disabled={loadingKillswitch}
+          className={`px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all active:scale-95 flex items-center gap-2 shrink-0 ${
+            isPaymentsStopped
+              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-900/40'
+              : 'bg-gradient-to-r from-rose-700 to-red-600 hover:from-rose-600 hover:to-red-500 text-white shadow-rose-900/50'
+          }`}
+        >
+          <Power className="w-4 h-4" />
+          <span>{isPaymentsStopped ? '🟢 RESUME Orders & Payments' : '🔴 STOP All Orders & Payments'}</span>
+        </button>
       </div>
 
       {/* Success notification banner */}
@@ -278,13 +393,99 @@ export default function CampusOperationsControl() {
         </div>
       </div>
 
-      {/* SECTION 2: 7:30 PM RUNNER DISPATCH STATION */}
+      {/* SECTION 2: CANCEL & AUTOMATED RAZORPAY REFUND STATION */}
+      <div className="space-y-3 bg-[#131D31]/60 border border-rose-900/40 p-4 sm:p-5 rounded-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
+            <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+              <span>2. Campus Order Cancellation & Automated Refund Station</span>
+            </h3>
+            <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-rose-950 text-rose-300 border border-rose-800">
+              ⚡ Razorpay & Wallet Auto-Refund
+            </span>
+          </div>
+
+          <span className="text-[11px] text-slate-400">
+            Active Orders: <strong className="text-white">{zoneStats.all.active}</strong>
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-400">
+          Cancels active orders for the zone and <strong>instantly triggers online refunds via Razorpay API</strong> (or credits wallet). Customer status immediately displays <span className="text-rose-400 font-bold">CANCELLED & REFUNDED</span>.
+        </p>
+
+        {/* 3 Zone Cancellation & Refund Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
+          {/* Cancel Buddha Button */}
+          <button
+            onClick={() => handleZoneCancel('Buddha')}
+            disabled={loadingZone === 'cancel_Buddha'}
+            className="p-3 rounded-2xl bg-gradient-to-r from-rose-900 to-rose-700 hover:from-rose-800 hover:to-rose-600 border border-rose-700/60 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-between disabled:opacity-50"
+          >
+            <div className="flex items-center gap-2">
+              <XCircle className="w-4 h-4 text-rose-300" />
+              <span>Cancel Buddha (Refund)</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-xl bg-black/40 text-[10px] font-black text-rose-200">
+              {zoneStats.buddha.active} Active
+            </span>
+          </button>
+
+          {/* Cancel KIPM Button */}
+          <button
+            onClick={() => handleZoneCancel('KIPM')}
+            disabled={loadingZone === 'cancel_KIPM'}
+            className="p-3 rounded-2xl bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 hover:to-red-600 border border-red-700/60 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-between disabled:opacity-50"
+          >
+            <div className="flex items-center gap-2">
+              <XCircle className="w-4 h-4 text-red-300" />
+              <span>Cancel KIPM (Refund)</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-xl bg-black/40 text-[10px] font-black text-red-200">
+              {zoneStats.kipm.active} Active
+            </span>
+          </button>
+
+          {/* Cancel ITM Button */}
+          <button
+            onClick={() => handleZoneCancel('ITM')}
+            disabled={loadingZone === 'cancel_ITM'}
+            className="p-3 rounded-2xl bg-gradient-to-r from-pink-950 to-pink-800 hover:from-pink-900 hover:to-pink-700 border border-pink-700/60 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-between disabled:opacity-50"
+          >
+            <div className="flex items-center gap-2">
+              <XCircle className="w-4 h-4 text-pink-300" />
+              <span>Cancel ITM (Refund)</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-xl bg-black/40 text-[10px] font-black text-pink-200">
+              {zoneStats.itm.active} Active
+            </span>
+          </button>
+
+          {/* Cancel All Button */}
+          <button
+            onClick={() => handleZoneCancel('ALL')}
+            disabled={loadingZone === 'cancel_ALL'}
+            className="p-3 rounded-2xl bg-gradient-to-r from-stone-900 to-rose-950 hover:from-stone-800 hover:to-rose-900 border border-rose-800 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-between disabled:opacity-50"
+          >
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-rose-400" />
+              <span>Cancel All Zones</span>
+            </div>
+            <span className="px-2 py-0.5 rounded-xl bg-black/50 text-[10px] font-black text-rose-300">
+              {zoneStats.all.active} Active
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* SECTION 3: 7:30 PM RUNNER DISPATCH STATION */}
       <div className="space-y-4 bg-[#131D31]/60 border border-slate-800/80 p-4 sm:p-5 rounded-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-              <span>2. Campus Runner Dispatch Station</span>
+              <span>3. Campus Runner Dispatch Station</span>
             </h3>
             <span
               className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
@@ -298,7 +499,7 @@ export default function CampusOperationsControl() {
           </div>
 
           <span className="text-[11px] text-slate-400">
-            Dispatchable Food: <strong className="text-white">{zoneStats.all.dispatchable}</strong> orders
+            Dispatchable Food: <strong className="text-white">{zoneStats.all.active}</strong> orders
           </span>
         </div>
 
@@ -380,7 +581,7 @@ export default function CampusOperationsControl() {
               <span>Dispatch Buddha</span>
             </div>
             <span className="px-2 py-0.5 rounded-xl bg-black/30 text-[10px] font-black">
-              {zoneStats.buddha.dispatchable} Orders
+              {zoneStats.buddha.active} Orders
             </span>
           </button>
 
@@ -395,7 +596,7 @@ export default function CampusOperationsControl() {
               <span>Dispatch KIPM</span>
             </div>
             <span className="px-2 py-0.5 rounded-xl bg-black/30 text-[10px] font-black">
-              {zoneStats.kipm.dispatchable} Orders
+              {zoneStats.kipm.active} Orders
             </span>
           </button>
 
@@ -410,7 +611,7 @@ export default function CampusOperationsControl() {
               <span>Dispatch ITM</span>
             </div>
             <span className="px-2 py-0.5 rounded-xl bg-black/30 text-[10px] font-black">
-              {zoneStats.itm.dispatchable} Orders
+              {zoneStats.itm.active} Orders
             </span>
           </button>
 
@@ -425,7 +626,7 @@ export default function CampusOperationsControl() {
               <span>Dispatch All</span>
             </div>
             <span className="px-2 py-0.5 rounded-xl bg-black/30 text-[10px] font-black">
-              {zoneStats.all.dispatchable} Orders
+              {zoneStats.all.active} Orders
             </span>
           </button>
         </div>

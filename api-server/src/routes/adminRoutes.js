@@ -16,8 +16,9 @@ router.post('/customers/:id/wallet', requireStaffRole(['SUPER_ADMIN']), userCont
 router.get('/staff-users', requireStaffRole(['SUPER_ADMIN']), userController.getStaffList);
 router.post('/staff-users', requireStaffRole(['SUPER_ADMIN']), userController.createStaffUser);
 
-// System Settings Management
+// System Settings & Emergency Halt Killswitch
 router.get('/settings', requireStaffRole(['SUPER_ADMIN']), statsController.getSystemSettings);
 router.post('/settings', requireStaffRole(['SUPER_ADMIN']), statsController.updateSystemSettings);
+router.post('/toggle-stop-payments', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER']), statsController.toggleStopPayments);
 
 module.exports = router;
