@@ -50,8 +50,9 @@ export const DISH_IMAGES = {
   'aalu paratha': '/images/food/aalu_paratha.webp',
   'lacchha paratha': '/images/food/lacchha_paratha.webp',
   'tandoori roti': '/images/food/tandoori_roti.webp',
-  'chola bhatura(full)': '/images/food/chola_bhatura.webp',
+  'roti sabji': '/images/food/roti_sabji.webp',
   'puri sabji': '/images/food/puri_sabji.webp',
+  'chola bhatura(full)': '/images/food/chola_bhatura.webp',
   'masala kulcha': '/images/food/masala_kulcha.webp',
   'chawal+roti(pack)': '/images/food/chawal_roti_pack.webp',
 
@@ -84,6 +85,7 @@ export function getDishImage(item) {
   if (nameKey.includes('aalu paratha') || nameKey.includes('aloo paratha')) return DISH_IMAGES['aalu paratha'];
   if (nameKey.includes('lacchha') || nameKey.includes('laccha')) return DISH_IMAGES['lacchha paratha'];
   if (nameKey.includes('tandoori roti')) return DISH_IMAGES['tandoori roti'];
+  if (nameKey.includes('roti sabji') || nameKey.includes('roti sabzi')) return DISH_IMAGES['roti sabji'];
   if (nameKey.includes('chola bhatura') || nameKey.includes('chole')) return DISH_IMAGES['chola bhatura(full)'];
   if (nameKey.includes('puri sabji') || nameKey.includes('poori')) return DISH_IMAGES['puri sabji'];
   if (nameKey.includes('kulcha')) return DISH_IMAGES['masala kulcha'];

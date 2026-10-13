@@ -96,6 +96,41 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
   const rollItems = useMemo(() => (menu.Rolls || []).filter(i => !i.is_outlet_only), [menu]);
   const riceItems = useMemo(() => (menu.Rice || []).filter(i => !i.is_outlet_only), [menu]);
 
+  // 30 Rupees Student Special Deal Items (Roti Sabji & Puri Sabji)
+  const allMenuItems = useMemo(() => menu.All || [], [menu]);
+
+  const rotiDealItem = useMemo(() => {
+    const found = allMenuItems.find(i => (i.name || '').toLowerCase() === 'roti sabji' || (i.name || '').toLowerCase().includes('roti sabji'));
+    if (found) {
+      return { ...found, customer_price: 30 };
+    }
+    return {
+      id: 39,
+      name: 'Roti Sabji',
+      category: 'Thali',
+      customer_price: 30,
+      vendor_cost: 22,
+      is_veg: true,
+      description: '4 Fresh soft tawa rotis served with authentic homestyle rich mix veg sabzi & sliced onions.'
+    };
+  }, [allMenuItems]);
+
+  const puriDealItem = useMemo(() => {
+    const found = allMenuItems.find(i => (i.name || '').toLowerCase() === 'puri sabji' || (i.name || '').toLowerCase().includes('puri sabji'));
+    if (found) {
+      return { ...found, customer_price: 30 };
+    }
+    return {
+      id: 23,
+      name: 'Puri sabji',
+      category: 'Thali',
+      customer_price: 30,
+      vendor_cost: 22,
+      is_veg: true,
+      description: '4 Hot golden puffed crispy puris served with spiced desi aloo curry & tangy pickle.'
+    };
+  }, [allMenuItems]);
+
   const categories = useMemo(() => {
     const list = [
       {
@@ -402,6 +437,222 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
           <span>⏰ Orders accepted during scheduled campus delivery batches</span>
         </div>
       )}
+
+      {/* 🌟 SPECIAL PROMOTIONAL DEAL: FLAT ₹30 STUDENT MEAL SPOTLIGHT */}
+      <div className="bg-gradient-to-br from-[#1E1108] via-[#140E0A] to-[#111111] border-2 border-[#FF5722]/70 rounded-3xl p-4 sm:p-5 shadow-[0_14px_45px_rgba(255,87,34,0.25)] relative overflow-hidden space-y-4">
+        {/* Ambient Glow Effects */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#FF5722]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Promotional Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 relative z-10">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#FF5722] to-[#E64A19] text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm animate-pulse">
+                <Flame className="w-3 h-3 fill-white" />
+                <span>FLAT ₹30 • CRAZY STUDENT DEAL</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/80 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+                Lowest Price in Campus
+              </span>
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">
+              Campus Ki Sabse Sasti & Swadisht Deal — Sirf <span className="text-[#FF7043] underline decoration-amber-500 underline-offset-4">₹30 Me Pet Bharega!</span>
+            </h3>
+            <p className="text-xs text-neutral-300 mt-1 max-w-2xl leading-relaxed font-medium">
+              Daily pocket-friendly meal for hostel students. Freshly made hot Rotis or Golden Crispy Puris with authentic homestyle Sabzi at unbeatable ₹30 price!
+            </p>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 text-[11px] font-bold text-amber-300/90 bg-amber-950/40 border border-amber-800/40 px-3 py-1.5 rounded-2xl shrink-0">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Guaranteed Fresh & Steaming Hot</span>
+          </div>
+        </div>
+
+        {/* 2 Deal Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 relative z-10">
+          {/* DEAL ITEM 1: ROTI SABJI */}
+          <div className="bg-[#18120E] border border-amber-600/40 hover:border-[#FF5722] rounded-3xl p-3.5 sm:p-4 flex gap-3.5 justify-between shadow-lg transition-all group relative overflow-hidden">
+            {/* Discount Badge */}
+            <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-[#FF5722] text-white text-[10px] font-black uppercase shadow-md">
+              40% OFF
+            </div>
+
+            {/* Left: Info */}
+            <div className="flex-1 flex flex-col justify-between min-w-0 pr-1">
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <FoodClassBadge isVeg={true} />
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider">
+                    Pure Veg Meal
+                  </span>
+                  <span className="text-[10px] text-amber-300 font-bold bg-amber-950/60 border border-amber-700/50 px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                    <Star className="w-2.5 h-2.5 fill-amber-300" />
+                    <span>4.9</span>
+                  </span>
+                </div>
+
+                <h4 className="text-sm sm:text-base font-black text-white group-hover:text-[#FF7043] transition-colors leading-tight line-clamp-1">
+                  Roti Sabji Special (4 Roti + Sabji)
+                </h4>
+
+                <p className="text-[11px] text-neutral-400 mt-1 line-clamp-2 leading-relaxed">
+                  4 Fresh soft whole-wheat rotis served with authentic homestyle rich mix veg sabzi curry & fresh onions.
+                </p>
+              </div>
+
+              <div className="mt-2.5 flex items-baseline gap-2">
+                <span className="text-lg sm:text-xl font-black text-[#FF7043]">₹30</span>
+                <span className="text-xs text-neutral-500 line-through font-bold">₹50</span>
+                <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800/60">
+                  Save ₹20
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Image & Add to Cart */}
+            <div className="relative shrink-0 flex flex-col items-center justify-between">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border border-amber-500/30 bg-neutral-900 shadow-md">
+                <img
+                  src="/images/food/roti_sabji.webp"
+                  alt="Roti Sabji"
+                  loading="eager"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => { e.target.src = '/images/food/veg_thali.webp'; }}
+                />
+              </div>
+
+              {/* Add to Cart Stepper */}
+              <div className="w-full mt-2">
+                {getItemQty(rotiDealItem.id) === 0 ? (
+                  <button
+                    onClick={() => addToCart(rotiDealItem)}
+                    className="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#F4511E] hover:to-[#D84315] text-white font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center justify-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>ADD • ₹30</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-between bg-neutral-900 border border-[#FF5722] rounded-xl p-1 shadow-md">
+                    <button
+                      onClick={() => updateQuantity(rotiDealItem.id, getItemQty(rotiDealItem.id) - 1)}
+                      className="w-6 h-6 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white flex items-center justify-center active:scale-90"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="text-xs font-black text-white px-2">
+                      {getItemQty(rotiDealItem.id)}
+                    </span>
+                    <button
+                      onClick={() => updateQuantity(rotiDealItem.id, getItemQty(rotiDealItem.id) + 1)}
+                      className="w-6 h-6 rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white flex items-center justify-center active:scale-90"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* DEAL ITEM 2: PURI SABJI */}
+          <div className="bg-[#18120E] border border-amber-600/40 hover:border-[#FF5722] rounded-3xl p-3.5 sm:p-4 flex gap-3.5 justify-between shadow-lg transition-all group relative overflow-hidden">
+            {/* Discount Badge */}
+            <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-[#FF5722] text-white text-[10px] font-black uppercase shadow-md">
+              40% OFF
+            </div>
+
+            {/* Left: Info */}
+            <div className="flex-1 flex flex-col justify-between min-w-0 pr-1">
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <FoodClassBadge isVeg={true} />
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider">
+                    Pure Veg Meal
+                  </span>
+                  <span className="text-[10px] text-amber-300 font-bold bg-amber-950/60 border border-amber-700/50 px-1.5 py-0.2 rounded-full flex items-center gap-0.5">
+                    <Star className="w-2.5 h-2.5 fill-amber-300" />
+                    <span>4.9</span>
+                  </span>
+                </div>
+
+                <h4 className="text-sm sm:text-base font-black text-white group-hover:text-[#FF7043] transition-colors leading-tight line-clamp-1">
+                  Puri Sabji Special (4 Puri + Aloo Sabzi)
+                </h4>
+
+                <p className="text-[11px] text-neutral-400 mt-1 line-clamp-2 leading-relaxed">
+                  4 Golden hot crispy puffed puris served with spicy desi aloo sabzi curry, sliced onions & spicy pickle.
+                </p>
+              </div>
+
+              <div className="mt-2.5 flex items-baseline gap-2">
+                <span className="text-lg sm:text-xl font-black text-[#FF7043]">₹30</span>
+                <span className="text-xs text-neutral-500 line-through font-bold">₹50</span>
+                <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800/60">
+                  Save ₹20
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Image & Add to Cart */}
+            <div className="relative shrink-0 flex flex-col items-center justify-between">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border border-amber-500/30 bg-neutral-900 shadow-md">
+                <img
+                  src="/images/food/puri_sabji.webp"
+                  alt="Puri Sabji"
+                  loading="eager"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => { e.target.src = '/images/food/sada_thali.webp'; }}
+                />
+              </div>
+
+              {/* Add to Cart Stepper */}
+              <div className="w-full mt-2">
+                {getItemQty(puriDealItem.id) === 0 ? (
+                  <button
+                    onClick={() => addToCart(puriDealItem)}
+                    className="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#F4511E] hover:to-[#D84315] text-white font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center justify-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>ADD • ₹30</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-between bg-neutral-900 border border-[#FF5722] rounded-xl p-1 shadow-md">
+                    <button
+                      onClick={() => updateQuantity(puriDealItem.id, getItemQty(puriDealItem.id) - 1)}
+                      className="w-6 h-6 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white flex items-center justify-center active:scale-90"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="text-xs font-black text-white px-2">
+                      {getItemQty(puriDealItem.id)}
+                    </span>
+                    <button
+                      onClick={() => updateQuantity(puriDealItem.id, getItemQty(puriDealItem.id) + 1)}
+                      className="w-6 h-6 rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white flex items-center justify-center active:scale-90"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Value Trust Bar */}
+        <div className="pt-2 border-t border-amber-900/40 flex items-center justify-between text-[11px] text-neutral-400 flex-wrap gap-2">
+          <span className="flex items-center gap-1 text-amber-400 font-semibold">
+            <Zap className="w-3 h-3" />
+            <span>Best Student Budget Meal in Gorakhpur</span>
+          </span>
+          <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>100% Freshly Cooked • Delivered to Campus Gate</span>
+          </span>
+        </div>
+      </div>
 
       {/* 4. Luxury Category Selector */}
       <div className="space-y-3">
