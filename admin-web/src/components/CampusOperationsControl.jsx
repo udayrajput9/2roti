@@ -15,7 +15,12 @@ import {
   ShieldCheck,
   XCircle,
   Power,
-  RotateCcw
+  RotateCcw,
+  Layers,
+  Lock,
+  Printer,
+  Truck,
+  RefreshCw
 } from 'lucide-react';
 import { useLiveOrders } from '../context/LiveOrderContext';
 
@@ -62,21 +67,80 @@ export default function CampusOperationsControl() {
   }, []);
 
   // Fetch active batch configuration to dynamically sync trigger milestones (6:01 Cutoff, 6:10 Slips, 7:30 QR)
+  const [allBatches, setAllBatches] = useState([]);
   const [activeBatch, setActiveBatch] = useState(null);
+  const [isRefreshingBatch, setIsRefreshingBatch] = useState(false);
+
+  // Smart operational batch finder based on active orders and current IST time
+  const determineOperationalBatch = (batches, currentFromApi, prevSelected) => {
+    if (!batches || batches.length === 0) return null;
+    if (prevSelected) {
+      const matched = batches.find(b => b.id === prevSelected.id);
+      if (matched) return matched;
+    }
+    // 1. If currently inside open payment window, select it
+    if (currentFromApi) return currentFromApi;
+    const openBatch = batches.find(b => b.is_open);
+    if (openBatch) return openBatch;
+
+    // 2. If after payment end, check which batch is currently in operational/dispatch window
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + istOffset);
+    const istMins = istDate.getUTCHours() * 60 + istDate.getUTCMinutes();
+
+    const inOps = batches.find(b => {
+      const [sH, sM] = (b.payment_start_time || '00:00').split(':').map(Number);
+      const [dH, dM] = (b.dispatch_time || '23:59').split(':').map(Number);
+      const start = (sH || 0) * 60 + (sM || 0);
+      const end = (dH || 0) * 60 + (dM || 0) + 90; // 90 min operations buffer
+      return istMins >= start && istMins <= end;
+    });
+    if (inOps) return inOps;
+
+    // 3. Otherwise find the upcoming batch
+    let nextBatch = null;
+    let minDiff = Infinity;
+    for (const b of batches) {
+      const [sH, sM] = (b.payment_start_time || '00:00').split(':').map(Number);
+      const start = (sH || 0) * 60 + (sM || 0);
+      let diff = start - istMins;
+      if (diff < 0) diff += 1440;
+      if (diff < minDiff) {
+        minDiff = diff;
+        nextBatch = b;
+      }
+    }
+    return nextBatch || batches[0];
+  };
+
+  const refreshBatchList = async (manual = false) => {
+    if (manual) setIsRefreshingBatch(true);
+    try {
+      const res = await fetch('/api/batches');
+      const d = await res.json();
+      if (d.success && d.active_batches && d.active_batches.length > 0) {
+        setAllBatches(d.active_batches);
+        setActiveBatch(prev => determineOperationalBatch(d.active_batches, d.current_batch, prev));
+      }
+    } catch (e) {
+      console.warn('Failed to refresh batch list in operations center:', e);
+    } finally {
+      if (manual) setTimeout(() => setIsRefreshingBatch(false), 400);
+    }
+  };
 
   useEffect(() => {
-    fetch('/api/batches')
-      .then(r => r.json())
-      .then(d => {
-        if (d.success && d.active_batches && d.active_batches.length > 0) {
-          const cur = d.current_batch || d.active_batches[0];
-          setActiveBatch(cur);
-        }
-      })
-      .catch(() => {});
+    refreshBatchList();
+    const batchInterval = setInterval(() => refreshBatchList(false), 15000);
+    return () => clearInterval(batchInterval);
   }, []);
 
   // Time milestones (dynamically calculated from batch trigger events)
+  const cutoffMins = activeBatch?.kitchen_cutoff_time
+    ? (parseInt(activeBatch.kitchen_cutoff_time.split(':')[0], 10) * 60 + parseInt(activeBatch.kitchen_cutoff_time.split(':')[1], 10))
+    : 1081; // Default 18:01 (6:01 PM IST)
+
   const acceptMins = activeBatch?.slips_ready_time
     ? (parseInt(activeBatch.slips_ready_time.split(':')[0], 10) * 60 + parseInt(activeBatch.slips_ready_time.split(':')[1], 10))
     : 1090; // Default 18:10 (6:10 PM IST)
@@ -85,6 +149,7 @@ export default function CampusOperationsControl() {
     ? (parseInt(activeBatch.dispatch_time.split(':')[0], 10) * 60 + parseInt(activeBatch.dispatch_time.split(':')[1], 10))
     : 1170; // Default 19:30 (7:30 PM IST)
 
+  const isCutoffActive = totalIstMinutes >= cutoffMins;
   const isAcceptActive = totalIstMinutes >= acceptMins;
   const isDispatchActive = totalIstMinutes >= dispatchMins;
 
@@ -146,8 +211,9 @@ export default function CampusOperationsControl() {
   // Handle Zone Bulk Accept (Active at 6:10 PM IST)
   const handleZoneAccept = async (zone) => {
     if (!isAcceptActive) {
+      const scheduledTime = activeBatch?.slips_ready_12h || '6:10 PM IST';
       const proceed = window.confirm(
-        `⏰ Scheduled Accept time is 6:10 PM IST (Current: ${currentTimeStr}).\n\nDo you want to proceed and accept ${zone} orders now for testing?`
+        `⏰ Scheduled Accept time is ${scheduledTime} for "${activeBatch?.name || 'Active Batch'}" (Current: ${currentTimeStr}).\n\nDo you want to proceed and accept ${zone} orders now for testing?`
       );
       if (!proceed) return;
     }
@@ -197,8 +263,9 @@ export default function CampusOperationsControl() {
   // Handle Zone Dispatch & Runner Assignment (Active at 7:30 PM IST)
   const handleZoneDispatch = async (zone) => {
     if (!isDispatchActive) {
+      const scheduledDispatch = activeBatch?.dispatch_12h || '7:30 PM IST';
       const proceed = window.confirm(
-        `⏰ Scheduled Runner Dispatch time is 7:30 PM IST (Current: ${currentTimeStr}).\n\nDo you want to dispatch ${zone} orders now for testing?`
+        `⏰ Scheduled Runner Dispatch time is ${scheduledDispatch} for "${activeBatch?.name || 'Active Batch'}" (Current: ${currentTimeStr}).\n\nDo you want to dispatch ${zone} orders now for testing?`
       );
       if (!proceed) return;
     }
@@ -245,16 +312,106 @@ export default function CampusOperationsControl() {
               Campus Operations Command Center
             </h2>
             <p className="text-xs text-slate-400">
-              Automated 6:10 PM order acceptance, Razorpay cancellations & 7:30 PM runner dispatch pipeline
+              {activeBatch ? (
+                <span>
+                  Operating Batch: <strong className="text-orange-400 font-bold">{activeBatch.name}</strong> ({activeBatch.payment_start_12h} – {activeBatch.payment_end_12h}) • Slips/Accept at <strong className="text-blue-300 font-mono">{activeBatch.slips_ready_12h}</strong> • Dispatch at <strong className="text-emerald-300 font-mono">{activeBatch.dispatch_12h}</strong>
+                </span>
+              ) : (
+                'Automated order acceptance, Razorpay cancellations & runner dispatch pipeline'
+              )}
             </p>
           </div>
         </div>
 
-        {/* Live IST Clock Badge */}
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        {/* Live IST Clock Badge & Batch Selector */}
+        <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+          {allBatches.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700/80 rounded-2xl px-2.5 py-1 text-xs shadow-inner">
+              <span className="text-slate-400 text-[11px] font-semibold">Batch:</span>
+              <select
+                value={activeBatch?.id || ''}
+                onChange={(e) => {
+                  const found = allBatches.find(b => String(b.id) === e.target.value);
+                  if (found) setActiveBatch(found);
+                }}
+                className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
+              >
+                {allBatches.map(b => (
+                  <option key={b.id} value={b.id} className="bg-slate-900 text-white">
+                    {b.name} ({b.payment_start_12h} - {b.payment_end_12h})
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => refreshBatchList(true)}
+                disabled={isRefreshingBatch}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                title="Refresh Batches from database"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefreshingBatch ? 'animate-spin text-[#FF5722]' : ''}`} />
+              </button>
+            </div>
+          )}
+
           <div className="px-3.5 py-1.5 rounded-2xl bg-slate-900 border border-slate-700/80 flex items-center gap-2 text-xs font-mono font-bold text-slate-200 shadow-inner">
             <Clock className="w-3.5 h-3.5 text-[#FF5722] animate-spin" style={{ animationDuration: '6s' }} />
             <span>{currentTimeStr || 'Loading IST...'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ACTIVE BATCH PIPELINE STATUS BAR */}
+      <div className="bg-[#131D31] border border-blue-900/40 rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+            <Layers className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-black text-white uppercase tracking-wider">
+                Operating Batch: {activeBatch?.name || 'Default Dinner Batch'}
+              </span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase ${
+                activeBatch?.is_open
+                  ? 'bg-emerald-950 text-emerald-400 border border-emerald-700'
+                  : 'bg-slate-800 text-slate-400 border border-slate-700'
+              }`}>
+                {activeBatch?.is_open ? '🟢 Window Open' : '⏸️ Window Closed'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Payment Window: <strong className="text-slate-200">{activeBatch?.payment_start_12h || '3:00 PM'} – {activeBatch?.payment_end_12h || '6:00 PM'} IST</strong>
+            </p>
+          </div>
+        </div>
+
+        {/* 3 Pipeline Trigger Milestones */}
+        <div className="flex items-center gap-2 flex-wrap self-stretch md:self-auto justify-end">
+          <div className={`px-2.5 py-1 rounded-xl border text-[11px] font-mono flex items-center gap-1.5 ${
+            isCutoffActive
+              ? 'bg-red-950/60 text-red-300 border-red-800/80 font-bold'
+              : 'bg-slate-900 text-slate-400 border-slate-800'
+          }`}>
+            <Lock className="w-3 h-3 text-red-400" />
+            <span>Cutoff: {activeBatch?.kitchen_cutoff_12h || '6:01 PM'}</span>
+          </div>
+
+          <div className={`px-2.5 py-1 rounded-xl border text-[11px] font-mono flex items-center gap-1.5 ${
+            isAcceptActive
+              ? 'bg-blue-950/60 text-blue-300 border-blue-800/80 font-bold'
+              : 'bg-slate-900 text-slate-400 border-slate-800'
+          }`}>
+            <Printer className="w-3 h-3 text-blue-400" />
+            <span>Slips/Accept: {activeBatch?.slips_ready_12h || '6:10 PM'}</span>
+          </div>
+
+          <div className={`px-2.5 py-1 rounded-xl border text-[11px] font-mono flex items-center gap-1.5 ${
+            isDispatchActive
+              ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/80 font-bold'
+              : 'bg-slate-900 text-slate-400 border-slate-800'
+          }`}>
+            <Truck className="w-3 h-3 text-emerald-400" />
+            <span>Dispatch QR: {activeBatch?.dispatch_12h || '7:30 PM'}</span>
           </div>
         </div>
       </div>
@@ -339,7 +496,9 @@ export default function CampusOperationsControl() {
                   : 'bg-amber-950/80 text-amber-300 border-amber-700'
               }`}
             >
-              {isAcceptActive ? '🟢 Active (6:10 PM)' : '⏰ Unlocks at 6:10 PM IST'}
+              {isAcceptActive
+                ? `🟢 Active (${activeBatch?.slips_ready_12h || '6:10 PM'})`
+                : `⏰ Unlocks at ${activeBatch?.slips_ready_12h || '6:10 PM'} IST`}
             </span>
           </div>
 
@@ -517,7 +676,9 @@ export default function CampusOperationsControl() {
                   : 'bg-amber-950/80 text-amber-300 border-amber-700'
               }`}
             >
-              {isDispatchActive ? '🟢 Active (7:30 PM)' : '⏰ Unlocks at 7:30 PM IST'}
+              {isDispatchActive
+                ? `🟢 Active (${activeBatch?.dispatch_12h || '7:30 PM'})`
+                : `⏰ Unlocks at ${activeBatch?.dispatch_12h || '7:30 PM'} IST`}
             </span>
           </div>
 
