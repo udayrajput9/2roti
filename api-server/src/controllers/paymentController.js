@@ -29,16 +29,6 @@ async function createRazorpayOrder(req, res) {
       });
     }
 
-    // Active Order Batch Check: Verify payment window
-    const { checkIfPaymentsAllowed } = require('./batchController');
-    const batchCheck = await checkIfPaymentsAllowed();
-    if (!batchCheck.allowed) {
-      return res.status(403).json({
-        success: false,
-        message: batchCheck.message || 'Online payments are currently closed outside active batch hours.'
-      });
-    }
-
     // Only mock if keys are the hardcoded demo keys, otherwise create real order
     let rzpOrderId;
     if (RAZORPAY_KEY_ID === 'rzp_test_2rotiDemoKey123') {
