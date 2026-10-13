@@ -836,20 +836,48 @@ async function getDailyZonePdf(req, res) {
     const { zone } = req.query;
     if (!zone) return res.status(400).send('Zone parameter is required (e.g. Buddha, KIPM, ITM).');
 
-    // Get today's start in IST (UTC+5:30) or just last 24 hours / today
+    // Get today's start in IST (UTC+5:30) or fallback to recent orders
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000;
     const istNow = new Date(now.getTime() + istOffset);
     const startOfIstToday = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0) - istOffset);
 
+    const isAll = String(zone).trim().toUpperCase() === 'ALL';
     let query = db('orders')
       .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED'])
-      .where('created_at', '>=', startOfIstToday.toISOString())
-      .whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%']);
+      .where('created_at', '>=', startOfIstToday.toISOString());
 
-    const orders = await query.orderBy('created_at', 'asc');
+    if (!isAll) {
+      query = query.whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%']);
+    }
+
+    let orders = await query.orderBy('created_at', 'asc');
+    let isShowingRecent = false;
+
     if (orders.length === 0) {
-      return res.status(404).send(`<html><body style="font-family:sans-serif;text-align:center;padding:40px;"><h2>No active orders found for zone: ${zone} today.</h2></body></html>`);
+      // Fallback to recent orders for testing or pre-cutoff preview outside active hours
+      let fallbackQuery = db('orders')
+        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED']);
+      if (!isAll) {
+        fallbackQuery = fallbackQuery.whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%']);
+      }
+      orders = await fallbackQuery.orderBy('created_at', 'desc').limit(25);
+      if (orders.length > 0) {
+        isShowingRecent = true;
+      }
+    }
+
+    if (orders.length === 0) {
+      return res.status(200).send(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>No Orders - Zone ${zone.toUpperCase()}</title></head>
+        <body style="font-family:system-ui,sans-serif;text-align:center;padding:50px;background:#f8fafc;color:#1e293b;">
+          <h2>No active orders found for zone: ${zone.toUpperCase()} today.</h2>
+          <p style="color:#64748b;">Orders placed today during operational hours will automatically generate slips here.</p>
+        </body>
+        </html>
+      `);
     }
 
     const idList = orders.map(o => o.id);
@@ -992,20 +1020,26 @@ async function getDailyZoneTable(req, res) {
     const istNow = new Date(now.getTime() + istOffset);
     const startOfIstToday = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0) - istOffset);
 
-    let orders = await db('orders')
+    const isAll = String(zone).trim().toUpperCase() === 'ALL';
+    let query = db('orders')
       .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED'])
-      .where('created_at', '>=', startOfIstToday.toISOString())
-      .whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%'])
-      .orderBy('created_at', 'asc');
+      .where('created_at', '>=', startOfIstToday.toISOString());
+
+    if (!isAll) {
+      query = query.whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%']);
+    }
+
+    let orders = await query.orderBy('created_at', 'asc');
 
     let isShowingRecent = false;
     if (orders.length === 0) {
       // Fallback to recent orders for testing convenience outside active hours
-      orders = await db('orders')
-        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED'])
-        .whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%'])
-        .orderBy('created_at', 'desc')
-        .limit(25);
+      let fallbackQuery = db('orders')
+        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED']);
+      if (!isAll) {
+        fallbackQuery = fallbackQuery.whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%']);
+      }
+      orders = await fallbackQuery.orderBy('created_at', 'desc').limit(25);
       if (orders.length > 0) {
         isShowingRecent = true;
       }
@@ -1412,9 +1446,14 @@ async function bulkAcceptZone(req, res) {
       return res.status(400).json({ success: false, message: 'Zone is required.' });
     }
 
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+    const startOfIstToday = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0) - istOffset);
+
     let query = db('orders')
       .where('order_status', 'PLACED')
-      .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
+      .where('created_at', '>=', startOfIstToday.toISOString());
 
     if (zone !== 'ALL') {
       query = query.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
@@ -1424,11 +1463,22 @@ async function bulkAcceptZone(req, res) {
     try {
       placedOrders = await query.select('id');
     } catch (e) {
-      let fallback = db('orders').where('order_status', 'PLACED');
-      if (zone !== 'ALL') {
-        fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
+      placedOrders = [];
+    }
+
+    // Fallback to last 24 hours if no orders created today (ensures robustness during off-hours)
+    if (placedOrders.length === 0) {
+      try {
+        let fallback = db('orders')
+          .where('order_status', 'PLACED')
+          .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
+        if (zone !== 'ALL') {
+          fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
+        }
+        placedOrders = await fallback.select('id');
+      } catch (e) {
+        placedOrders = [];
       }
-      placedOrders = await fallback.select('id');
     }
 
     const orderIds = placedOrders.map(o => o.id);
@@ -1496,11 +1546,16 @@ async function dispatchZone(req, res) {
       finalRunnerPhone = '9876543210';
     }
 
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+    const startOfIstToday = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0) - istOffset);
+
     // Orders to dispatch: campus orders for this zone that are PLACED, ACCEPTED, PREPARING, or READY
     let query = db('orders')
       .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
       .where('is_outlet_order', false)
-      .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
+      .where('created_at', '>=', startOfIstToday.toISOString());
 
     if (zone !== 'ALL') {
       query = query.whereRaw('LOWER(location_name) LIKE ?', ['%' + zoneKey + '%']);
@@ -1510,13 +1565,23 @@ async function dispatchZone(req, res) {
     try {
       targetOrders = await query.select('id');
     } catch (e) {
-      let fallback = db('orders')
-        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
-        .where('is_outlet_order', false);
-      if (zone !== 'ALL') {
-        fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + zoneKey + '%']);
+      targetOrders = [];
+    }
+
+    // Fallback to last 24 hours if no orders found today
+    if (targetOrders.length === 0) {
+      try {
+        let fallback = db('orders')
+          .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
+          .where('is_outlet_order', false)
+          .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
+        if (zone !== 'ALL') {
+          fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + zoneKey + '%']);
+        }
+        targetOrders = await fallback.select('id');
+      } catch (e) {
+        targetOrders = [];
       }
-      targetOrders = await fallback.select('id');
     }
 
     const orderIds = targetOrders.map(o => o.id);
@@ -1683,11 +1748,15 @@ async function bulkCancelZone(req, res) {
       return res.status(400).json({ success: false, message: 'Zone is required.' });
     }
 
-    const staffEmail = req.staff?.email || 'admin';
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+    const startOfIstToday = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0) - istOffset);
+
     let query = db('orders')
       .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
       .whereNot('payment_status', 'REFUNDED')
-      .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
+      .where('created_at', '>=', startOfIstToday.toISOString());
 
     if (zone !== 'ALL') {
       query = query.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
@@ -1697,13 +1766,23 @@ async function bulkCancelZone(req, res) {
     try {
       ordersToCancel = await query;
     } catch(e) {
-      let fallback = db('orders')
-        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
-        .whereNot('payment_status', 'REFUNDED');
-      if (zone !== 'ALL') {
-        fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
+      ordersToCancel = [];
+    }
+
+    // Fallback to last 24 hours if no orders found today
+    if (ordersToCancel.length === 0) {
+      try {
+        let fallback = db('orders')
+          .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
+          .whereNot('payment_status', 'REFUNDED')
+          .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
+        if (zone !== 'ALL') {
+          fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
+        }
+        ordersToCancel = await fallback;
+      } catch (e) {
+        ordersToCancel = [];
       }
-      ordersToCancel = await fallback;
     }
 
     if (ordersToCancel.length === 0) {

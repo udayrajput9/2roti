@@ -213,7 +213,7 @@ export default function ChatPage({ onOpenAuth, onNavigateToTab }) {
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>How 2Roti Support Works:</span>
             </div>
-            <p>1. Place your meal order during scheduled batch hours.</p>
+            <p>1. Place your meal order on the menu.</p>
             <p>2. Select your order here to message kitchen staff or track campus delivery status in real-time.</p>
           </div>
 
@@ -467,7 +467,7 @@ export default function ChatPage({ onOpenAuth, onNavigateToTab }) {
                             </div>
                           )}
                           <div className="text-[9px] text-neutral-400 pt-1">
-                            Show this to campus delivery runner during batch delivery dispatch
+                            Show this to campus delivery runner during evening campus gate delivery
                           </div>
                         </div>
                       </div>

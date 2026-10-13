@@ -46,32 +46,61 @@ export default function DailySlips() {
     setTimeout(() => setIsRefreshing(false), 500);
   };
 
-  // Group today's orders by campus zone
+  const [scopeFilter, setScopeFilter] = useState('TODAY');
+
+  const isCreatedTodayIst = (dateStr) => {
+    if (!dateStr) return true;
+    const d = new Date(dateStr);
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istOrder = new Date(d.getTime() + istOffset);
+    const istToday = new Date(now.getTime() + istOffset);
+    return (
+      istOrder.getUTCFullYear() === istToday.getUTCFullYear() &&
+      istOrder.getUTCMonth() === istToday.getUTCMonth() &&
+      istOrder.getUTCDate() === istToday.getUTCDate()
+    );
+  };
+
+  const scopedOrders = React.useMemo(() => {
+    if (scopeFilter === 'ALL') return orders;
+    return orders.filter(o => isCreatedTodayIst(o.created_at));
+  }, [orders, scopeFilter]);
+
+  // Group orders by campus zone
   const zoneBreakdown = React.useMemo(() => {
     const zones = {
       Buddha: { total: 0, placed: 0, accepted: 0, outForDelivery: 0, delivered: 0 },
       KIPM: { total: 0, placed: 0, accepted: 0, outForDelivery: 0, delivered: 0 },
       ITM: { total: 0, placed: 0, accepted: 0, outForDelivery: 0, delivered: 0 },
-      Other: { total: 0, placed: 0, accepted: 0, outForDelivery: 0, delivered: 0 }
+      All: { total: 0, placed: 0, accepted: 0, outForDelivery: 0, delivered: 0 }
     };
 
-    orders.forEach((o) => {
+    scopedOrders.forEach((o) => {
       if (o.is_outlet_order) return;
       const loc = (o.location_name || '').toLowerCase();
-      let key = 'Other';
+      let key = null;
       if (loc.includes('buddha')) key = 'Buddha';
       else if (loc.includes('kipm')) key = 'KIPM';
       else if (loc.includes('itm')) key = 'ITM';
 
-      zones[key].total++;
-      if (o.order_status === 'PLACED') zones[key].placed++;
-      if (['ACCEPTED', 'PREPARING', 'READY'].includes(o.order_status)) zones[key].accepted++;
-      if (o.order_status === 'OUT_FOR_DELIVERY') zones[key].outForDelivery++;
-      if (o.order_status === 'DELIVERED') zones[key].delivered++;
+      if (key) {
+        zones[key].total++;
+        if (o.order_status === 'PLACED') zones[key].placed++;
+        if (['ACCEPTED', 'PREPARING', 'READY'].includes(o.order_status)) zones[key].accepted++;
+        if (o.order_status === 'OUT_FOR_DELIVERY') zones[key].outForDelivery++;
+        if (o.order_status === 'DELIVERED') zones[key].delivered++;
+      }
+
+      zones.All.total++;
+      if (o.order_status === 'PLACED') zones.All.placed++;
+      if (['ACCEPTED', 'PREPARING', 'READY'].includes(o.order_status)) zones.All.accepted++;
+      if (o.order_status === 'OUT_FOR_DELIVERY') zones.All.outForDelivery++;
+      if (o.order_status === 'DELIVERED') zones.All.delivered++;
     });
 
     return zones;
-  }, [orders]);
+  }, [scopedOrders]);
 
   const apiBase = import.meta.env.VITE_API_URL || '';
 
@@ -99,20 +128,87 @@ export default function DailySlips() {
           </div>
         </div>
 
-        {/* Live IST Clock & Refresh */}
+        {/* Live IST Clock, Scope Filter & Refresh */}
         <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
-          <div className="px-3.5 py-1.5 rounded-2xl bg-slate-900 border border-slate-700/80 flex items-center gap-2 text-xs font-mono font-bold text-slate-200 shadow-inner">
+          {/* Scope Filter */}
+          <div className="flex items-center p-0.5 bg-slate-900 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setScopeFilter('TODAY')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                scopeFilter === 'TODAY'
+                  ? 'bg-[#FF5722] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Today
+            </button>
+            <button
+              onClick={() => setScopeFilter('ALL')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                scopeFilter === 'ALL'
+                  ? 'bg-[#FF5722] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              All Recent
+            </button>
+          </div>
+
+          <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700/80 flex items-center gap-2 text-xs font-mono font-bold text-slate-200 shadow-inner">
             <Clock className="w-3.5 h-3.5 text-[#FF5722] animate-spin" style={{ animationDuration: '6s' }} />
             <span>{currentTimeStr || 'IST Clock'}</span>
           </div>
           <button
             onClick={handleManualRefresh}
             disabled={isRefreshing}
-            className="p-2 rounded-2xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white transition-all active:scale-95 shadow-inner"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white transition-all active:scale-95 shadow-inner"
             title="Refresh order counts"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#FF5722]' : ''}`} />
           </button>
+        </div>
+      </div>
+
+      {/* Master All Campuses Quick Bar */}
+      <div className="bg-[#101726] border border-blue-800/70 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-black shrink-0">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                All Campuses Master Package (Combined)
+              </h3>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 font-bold border border-blue-800">
+                {zoneBreakdown.All.total} Total Orders
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              1-Click downloads for Buddha, KIPM & ITM combined into a single sheet for the central kitchen.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <a
+            href={`${apiBase}/api/orders/daily-zone-pdf?zone=ALL`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex-1 md:flex-none py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-blue-950/50 flex items-center justify-center gap-2 transition-all active:scale-95"
+          >
+            <Download className="w-4 h-4" />
+            <span>All Campuses Slips (PDF)</span>
+          </a>
+          <a
+            href={`${apiBase}/api/orders/daily-zone-table?zone=ALL`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex-1 md:flex-none py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-blue-300 hover:text-white border border-blue-700/40 font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95"
+          >
+            <Table className="w-4 h-4 text-blue-400" />
+            <span>All Campuses Kitchen Prep Table</span>
+          </a>
         </div>
       </div>
 
