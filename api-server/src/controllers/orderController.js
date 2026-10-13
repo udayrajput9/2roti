@@ -836,11 +836,16 @@ async function getDailyZonePdf(req, res) {
     const { zone } = req.query;
     if (!zone) return res.status(400).send('Zone parameter is required (e.g. Buddha, KIPM, ITM).');
 
-    // Get today's start in IST (UTC+5:30) or fallback to recent orders
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000;
     const istNow = new Date(now.getTime() + istOffset);
     const startOfIstToday = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate(), 0, 0, 0) - istOffset);
+    const formattedDate = istNow.toLocaleDateString('en-IN', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
 
     const isAll = String(zone).trim().toUpperCase() === 'ALL';
     let query = db('orders')
@@ -851,30 +856,33 @@ async function getDailyZonePdf(req, res) {
       query = query.whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%']);
     }
 
-    let orders = await query.orderBy('created_at', 'asc');
-    let isShowingRecent = false;
-
-    if (orders.length === 0) {
-      // Fallback to recent orders for testing or pre-cutoff preview outside active hours
-      let fallbackQuery = db('orders')
-        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED']);
-      if (!isAll) {
-        fallbackQuery = fallbackQuery.whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%']);
-      }
-      orders = await fallbackQuery.orderBy('created_at', 'desc').limit(25);
-      if (orders.length > 0) {
-        isShowingRecent = true;
-      }
-    }
+    const orders = await query.orderBy('created_at', 'asc');
 
     if (orders.length === 0) {
       return res.status(200).send(`
         <!DOCTYPE html>
         <html>
-        <head><title>No Orders - Zone ${zone.toUpperCase()}</title></head>
-        <body style="font-family:system-ui,sans-serif;text-align:center;padding:50px;background:#f8fafc;color:#1e293b;">
-          <h2>No active orders found for zone: ${zone.toUpperCase()} today.</h2>
-          <p style="color:#64748b;">Orders placed today during operational hours will automatically generate slips here.</p>
+        <head>
+          <title>Daily Slips - Zone ${zone.toUpperCase()}</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
+            .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 40px; max-width: 480px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+            .icon { font-size: 48px; margin-bottom: 16px; }
+            h2 { font-size: 20px; font-weight: 800; margin: 0 0 10px 0; color: #ffffff; }
+            p { font-size: 13px; color: #94a3b8; line-height: 1.6; margin: 0 0 20px 0; }
+            .badge { display: inline-block; background: #ea580c; color: #ffffff; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+            .date { font-family: monospace; font-size: 12px; color: #cbd5e1; margin-top: 15px; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="icon">🧾</div>
+            <div class="badge">Zone: ${zone.toUpperCase()}</div>
+            <h2 style="margin-top: 16px;">Aaj Koi Order Nahi Hai</h2>
+            <p>Is zone ke liye aaj abhi tak koi order place nahi hua hai. Jaise hi students order karenge, unke delivery slips automatically yahan generate ho jayenge.</p>
+            <div class="date">IST Date: ${formattedDate}</div>
+          </div>
         </body>
         </html>
       `);
@@ -1029,30 +1037,33 @@ async function getDailyZoneTable(req, res) {
       query = query.whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%']);
     }
 
-    let orders = await query.orderBy('created_at', 'asc');
-
-    let isShowingRecent = false;
-    if (orders.length === 0) {
-      // Fallback to recent orders for testing convenience outside active hours
-      let fallbackQuery = db('orders')
-        .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'DELIVERED']);
-      if (!isAll) {
-        fallbackQuery = fallbackQuery.whereRaw('LOWER(location_name) LIKE ?', ['%' + zone.toLowerCase() + '%']);
-      }
-      orders = await fallbackQuery.orderBy('created_at', 'desc').limit(25);
-      if (orders.length > 0) {
-        isShowingRecent = true;
-      }
-    }
+    const orders = await query.orderBy('created_at', 'asc');
 
     if (orders.length === 0) {
-      return res.status(404).send(`
+      return res.status(200).send(`
         <!DOCTYPE html>
         <html>
-        <head><title>No Orders - ${zone}</title></head>
-        <body style="font-family:system-ui,sans-serif;text-align:center;padding:50px;background:#f8fafc;color:#1e293b;">
-          <h2>No active orders found for zone: ${zone.toUpperCase()}</h2>
-          <p style="color:#64748b;">Orders placed today during scheduled delivery batches will appear here automatically.</p>
+        <head>
+          <title>Kitchen Prep Table - Zone ${zone.toUpperCase()}</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
+            .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 40px; max-width: 480px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+            .icon { font-size: 48px; margin-bottom: 16px; }
+            h2 { font-size: 20px; font-weight: 800; margin: 0 0 10px 0; color: #ffffff; }
+            p { font-size: 13px; color: #94a3b8; line-height: 1.6; margin: 0 0 20px 0; }
+            .badge { display: inline-block; background: #ea580c; color: #ffffff; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+            .date { font-family: monospace; font-size: 12px; color: #cbd5e1; margin-top: 15px; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="icon">👨‍🍳</div>
+            <div class="badge">Zone: ${zone.toUpperCase()}</div>
+            <h2 style="margin-top: 16px;">Kitchen Table: Aaj Koi Order Nahi Hai</h2>
+            <p>Is zone ke liye aaj abhi tak koi order place nahi hua hai. Jaise hi orders aayenge, kitchen cooking quantities aur preparation list yahan live ho jayegi.</p>
+            <div class="date">IST Date: ${formattedDate}</div>
+          </div>
         </body>
         </html>
       `);
@@ -1322,7 +1333,6 @@ async function getDailyZoneTable(req, res) {
               </div>
               <div class="brand-subtitle">
                 Official Campus Dispatch • Gorakhpur • Date: <strong>${formattedDate}</strong>
-                ${isShowingRecent ? ' <span style="color:#b45309;font-weight:bold;">(Showing Recent Orders for Prep Test)</span>' : ''}
               </div>
             </div>
             <div style="text-align:right;">
@@ -1466,25 +1476,10 @@ async function bulkAcceptZone(req, res) {
       placedOrders = [];
     }
 
-    // Fallback to last 24 hours if no orders created today (ensures robustness during off-hours)
-    if (placedOrders.length === 0) {
-      try {
-        let fallback = db('orders')
-          .where('order_status', 'PLACED')
-          .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
-        if (zone !== 'ALL') {
-          fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
-        }
-        placedOrders = await fallback.select('id');
-      } catch (e) {
-        placedOrders = [];
-      }
-    }
-
     const orderIds = placedOrders.map(o => o.id);
 
     if (orderIds.length === 0) {
-      return res.json({ success: true, count: 0, message: `No pending PLACED orders found for ${zone}.`, orders: [] });
+      return res.json({ success: true, count: 0, message: `No pending PLACED orders found for ${zone} today.`, orders: [] });
     }
 
     await db('orders')
@@ -1568,26 +1563,10 @@ async function dispatchZone(req, res) {
       targetOrders = [];
     }
 
-    // Fallback to last 24 hours if no orders found today
-    if (targetOrders.length === 0) {
-      try {
-        let fallback = db('orders')
-          .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
-          .where('is_outlet_order', false)
-          .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
-        if (zone !== 'ALL') {
-          fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + zoneKey + '%']);
-        }
-        targetOrders = await fallback.select('id');
-      } catch (e) {
-        targetOrders = [];
-      }
-    }
-
     const orderIds = targetOrders.map(o => o.id);
 
     if (orderIds.length === 0) {
-      return res.json({ success: true, count: 0, message: `No orders to dispatch for ${zone}.`, orders: [] });
+      return res.json({ success: true, count: 0, message: `No orders to dispatch for ${zone} today.`, orders: [] });
     }
 
     await db('orders')
@@ -1769,24 +1748,8 @@ async function bulkCancelZone(req, res) {
       ordersToCancel = [];
     }
 
-    // Fallback to last 24 hours if no orders found today
     if (ordersToCancel.length === 0) {
-      try {
-        let fallback = db('orders')
-          .whereIn('order_status', ['PLACED', 'ACCEPTED', 'PREPARING', 'READY'])
-          .whereNot('payment_status', 'REFUNDED')
-          .whereRaw("created_at >= (NOW() - INTERVAL '24 hours')");
-        if (zone !== 'ALL') {
-          fallback = fallback.whereRaw('LOWER(location_name) LIKE ?', ['%' + String(zone).trim().toLowerCase() + '%']);
-        }
-        ordersToCancel = await fallback;
-      } catch (e) {
-        ordersToCancel = [];
-      }
-    }
-
-    if (ordersToCancel.length === 0) {
-      return res.json({ success: true, count: 0, message: `No active orders found to cancel for ${zone}.`, orders: [] });
+      return res.json({ success: true, count: 0, message: `No active orders found to cancel for ${zone} today.`, orders: [] });
     }
 
     const results = [];
