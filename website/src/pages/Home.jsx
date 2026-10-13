@@ -38,6 +38,18 @@ import { useCart } from '../context/CartContext';
 export default function Home({ menu = {}, loading = false, onOpenCart, onChangeTab, initialCategory = 'Curry' }) {
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'Curry');
   const [dietaryFilter, setDietaryFilter] = useState('ALL'); // 'ALL' | 'VEG' | 'NON_VEG' | 'UNDER_100'
+  const [batchSettings, setBatchSettings] = useState(null);
+
+  React.useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.settings) {
+          setBatchSettings(d.settings);
+        }
+      })
+      .catch(() => {});
+  }, []);
   const { cartItems, totalCount, itemsTotal, addToCart, updateQuantity, getItemQty, sysSettings } = useCart();
 
   // Dynamic time-based greeting
@@ -355,10 +367,25 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
         </div>
       )}
 
-      {/* Time Notice Banner */}
-      <div className="bg-amber-950/60 border border-amber-500/50 rounded-2xl p-3 flex items-center justify-center gap-2 text-amber-300 text-xs sm:text-sm font-black shadow-md">
-        <span>⏰ Orders accepted: 3 PM – 6 PM IST only</span>
-      </div>
+      {/* Dynamic Batch Schedule Banner */}
+      {batchSettings?.batch_open ? (
+        <div className="bg-emerald-950/70 border border-emerald-500/50 rounded-2xl p-3 flex items-center justify-center gap-2 text-emerald-300 text-xs sm:text-sm font-black shadow-md">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>
+            🟢 Orders Open: {batchSettings.current_batch?.name || 'Active Batch'} ({batchSettings.current_batch?.payment_start_12h || '3:00 PM'} – {batchSettings.current_batch?.payment_end_12h || '6:00 PM'} IST)
+          </span>
+        </div>
+      ) : batchSettings?.next_batch ? (
+        <div className="bg-amber-950/70 border border-amber-500/50 rounded-2xl p-3 flex items-center justify-center gap-2 text-amber-300 text-xs sm:text-sm font-black shadow-md">
+          <span>
+            ⏰ Next Order Batch: {batchSettings.next_batch.name} opens at {batchSettings.next_batch.payment_start_12h} IST
+          </span>
+        </div>
+      ) : (
+        <div className="bg-amber-950/60 border border-amber-500/50 rounded-2xl p-3 flex items-center justify-center gap-2 text-amber-300 text-xs sm:text-sm font-black shadow-md">
+          <span>⏰ Orders accepted: 3 PM – 6 PM IST only</span>
+        </div>
+      )}
 
       {/* 4. Luxury Category Selector */}
       <div className="space-y-3">

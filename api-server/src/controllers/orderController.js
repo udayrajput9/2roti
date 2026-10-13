@@ -31,6 +31,16 @@ async function createOrder(req, res) {
       });
     }
 
+    // Active Order Batch Check: Verify payment window
+    const { checkIfPaymentsAllowed } = require('./batchController');
+    const batchCheck = await checkIfPaymentsAllowed();
+    if (!batchCheck.allowed) {
+      return res.status(403).json({
+        success: false,
+        message: batchCheck.message || 'Orders and payments are currently closed outside active batch hours.'
+      });
+    }
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: 'Cart items cannot be empty.' });
     }

@@ -2,10 +2,23 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const statsController = require('../controllers/statsController');
+const activityController = require('../controllers/activityController');
+const batchController = require('../controllers/batchController');
 const { requireStaffRole } = require('../middleware/authMiddleware');
 
 // Dashboard statistics
 router.get('/dashboard-stats', requireStaffRole(['SUPER_ADMIN']), statsController.getDashboardStats);
+
+// Order Batches & Delivery Triggers
+router.get('/batches', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER']), batchController.getAllBatches);
+router.post('/batches', requireStaffRole(['SUPER_ADMIN']), batchController.createBatch);
+router.put('/batches/:id', requireStaffRole(['SUPER_ADMIN']), batchController.updateBatch);
+router.patch('/batches/:id/toggle', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER']), batchController.toggleBatch);
+router.delete('/batches/:id', requireStaffRole(['SUPER_ADMIN']), batchController.deleteBatch);
+
+// User Activity Monitoring (Daily Live Analytics & Drop-offs)
+router.get('/activity/overview', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER']), activityController.getActivityOverview);
+router.get('/activity/dropoffs', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER']), activityController.getOnboardingDropoffs);
 
 // Customer directory
 router.get('/customers', requireStaffRole(['SUPER_ADMIN', 'ORDER_MANAGER']), userController.getCustomers);

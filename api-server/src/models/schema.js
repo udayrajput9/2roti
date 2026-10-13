@@ -56,9 +56,83 @@ async function ensureSystemSettingsDefaults() {
   }
 }
 
+async function ensureActivityLogsTable() {
+  try {
+    const hasTable = await db.schema.hasTable('user_activity_logs');
+    if (!hasTable) {
+      await db.schema.createTable('user_activity_logs', (table) => {
+        table.bigIncrements('id').primary();
+        table.string('session_id', 100).notNullable();
+        table.integer('user_id').nullable().references('id').inTable('users').onDelete('SET NULL');
+        table.string('user_email', 255).nullable();
+        table.string('user_name', 255).nullable();
+        table.string('event_type', 50).notNullable();
+        table.string('page', 100).nullable();
+        table.text('metadata').nullable();
+        table.string('ip_address', 64).nullable();
+        table.string('user_agent', 500).nullable();
+        table.timestamp('created_at', { useTz: true }).defaultTo(db.fn.now());
+      });
+      try {
+        await db.raw('CREATE INDEX IF NOT EXISTS idx_activity_created_at ON user_activity_logs(created_at)');
+        await db.raw('CREATE INDEX IF NOT EXISTS idx_activity_event_type ON user_activity_logs(event_type)');
+        await db.raw('CREATE INDEX IF NOT EXISTS idx_activity_session_id ON user_activity_logs(session_id)');
+        await db.raw('CREATE INDEX IF NOT EXISTS idx_activity_user_id ON user_activity_logs(user_id)');
+      } catch (e) {
+        // Fallback for sqlite if raw index errors
+      }
+      console.log('✅ user_activity_logs table initialized.');
+    }
+  } catch (err) {
+    console.warn('ensureActivityLogsTable check warning:', err.message);
+  }
+}
+
+async function ensureOrderBatchesTable() {
+  try {
+    const hasTable = await db.schema.hasTable('order_batches');
+    if (!hasTable) {
+      await db.schema.createTable('order_batches', (table) => {
+        table.increments('id').primary();
+        table.string('name', 100).notNullable();
+        table.string('payment_start_time', 10).notNullable(); // HH:MM, e.g. "15:00"
+        table.string('payment_end_time', 10).notNullable();   // HH:MM, e.g. "18:00"
+        table.string('kitchen_cutoff_time', 10).notNullable(); // Trigger 1: "18:01"
+        table.string('slips_ready_time', 10).notNullable();   // Trigger 2: "18:10"
+        table.string('dispatch_time', 10).notNullable();      // Trigger 3: "19:30"
+        table.boolean('is_active').defaultTo(true);
+        table.text('description').nullable();
+        table.timestamp('created_at', { useTz: true }).defaultTo(db.fn.now());
+        table.timestamp('updated_at', { useTz: true }).defaultTo(db.fn.now());
+      });
+      console.log('✅ order_batches table created.');
+    }
+
+    // Seed default batch if empty
+    const batchCount = await db('order_batches').count('id as cnt').first();
+    if (parseInt(batchCount?.cnt || 0) === 0) {
+      await db('order_batches').insert({
+        name: 'Evening Dinner Batch (Default)',
+        payment_start_time: '15:00',
+        payment_end_time: '18:00',
+        kitchen_cutoff_time: '18:01',
+        slips_ready_time: '18:10',
+        dispatch_time: '19:30',
+        is_active: true,
+        description: 'Standard campus dinner batch: 3:00 PM - 6:00 PM IST payments, 6:10 PM slips, 7:30 PM delivery.'
+      });
+      console.log('✅ Default Evening Dinner Batch seeded.');
+    }
+  } catch (err) {
+    console.warn('ensureOrderBatchesTable check warning:', err.message);
+  }
+}
+
 async function initSchema() {
   await ensureOrderChatsTable();
   await ensureSystemSettingsDefaults();
+  await ensureActivityLogsTable();
+  await ensureOrderBatchesTable();
   // Fast-path: If core tables already exist, skip redundant DDL checks for ultra-fast startup (<100ms)
   try {
     const hasCore = await db.schema.hasTable('menu_items');

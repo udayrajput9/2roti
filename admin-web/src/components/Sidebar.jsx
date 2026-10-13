@@ -23,7 +23,8 @@ import {
   PackageCheck,
   ListOrdered,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  Activity
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useLiveOrders } from '../context/LiveOrderContext';
@@ -135,10 +136,24 @@ export default function Sidebar({ activeTab, onSelectTab }) {
       roles: ['SUPER_ADMIN', 'ORDER_MANAGER']
     },
     {
+      id: 'batches',
+      label: 'Order Batches & Delivery Slots',
+      icon: Clock,
+      roles: ['SUPER_ADMIN', 'ORDER_MANAGER'],
+      highlight: true
+    },
+    {
       id: 'customers',
       label: 'Customer Directory',
       icon: Users,
       roles: ['SUPER_ADMIN', 'ORDER_MANAGER']
+    },
+    {
+      id: 'user_activity',
+      label: 'Live User Activity & Drop-offs',
+      icon: Activity,
+      roles: ['SUPER_ADMIN', 'ORDER_MANAGER'],
+      highlight: true
     },
     {
       id: 'vendor_portal',

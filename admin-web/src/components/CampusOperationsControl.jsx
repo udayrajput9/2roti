@@ -61,9 +61,32 @@ export default function CampusOperationsControl() {
     return () => clearInterval(interval);
   }, []);
 
-  // Time milestones
-  const isAcceptActive = totalIstMinutes >= 1090; // 18:10 (6:10 PM IST)
-  const isDispatchActive = totalIstMinutes >= 1170; // 19:30 (7:30 PM IST)
+  // Fetch active batch configuration to dynamically sync trigger milestones (6:01 Cutoff, 6:10 Slips, 7:30 QR)
+  const [activeBatch, setActiveBatch] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/batches')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.active_batches && d.active_batches.length > 0) {
+          const cur = d.current_batch || d.active_batches[0];
+          setActiveBatch(cur);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Time milestones (dynamically calculated from batch trigger events)
+  const acceptMins = activeBatch?.slips_ready_time
+    ? (parseInt(activeBatch.slips_ready_time.split(':')[0], 10) * 60 + parseInt(activeBatch.slips_ready_time.split(':')[1], 10))
+    : 1090; // Default 18:10 (6:10 PM IST)
+
+  const dispatchMins = activeBatch?.dispatch_time
+    ? (parseInt(activeBatch.dispatch_time.split(':')[0], 10) * 60 + parseInt(activeBatch.dispatch_time.split(':')[1], 10))
+    : 1170; // Default 19:30 (7:30 PM IST)
+
+  const isAcceptActive = totalIstMinutes >= acceptMins;
+  const isDispatchActive = totalIstMinutes >= dispatchMins;
 
   // Calculate zone stats
   const zoneStats = useMemo(() => {

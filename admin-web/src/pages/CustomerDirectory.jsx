@@ -150,10 +150,19 @@ export default function CustomerDirectory() {
                     <tr key={c.id} className="hover:bg-slate-800/30">
                       <td className="py-3">
                         <div className="font-bold text-white">{c.name || 'Anonymous Student'}</div>
-                        <span className="text-[10px] text-slate-500">ID: #{c.id}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-slate-500">ID: #{c.id}</span>
+                          {c.email && <span className="text-[10px] text-slate-400 truncate max-w-[180px]">{c.email}</span>}
+                        </div>
                       </td>
-                      <td className="py-3 font-mono text-slate-300">
-                        +91 {c.phone_number}
+                      <td className="py-3">
+                        {c.phone_number && c.phone_number.startsWith('PENDING_') ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 bg-amber-950/70 border border-amber-800/70 px-2 py-0.5 rounded-md">
+                            ⚠️ Not Provided (Google Login)
+                          </span>
+                        ) : (
+                          <span className="font-mono text-slate-300">+91 {c.phone_number}</span>
+                        )}
                       </td>
                       <td className="py-3">
                         <span className="inline-flex items-center gap-1 font-semibold text-orange-400">

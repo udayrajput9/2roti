@@ -143,6 +143,17 @@ async function getPublicSettings(req, res) {
     if (settings.DEFAULT_DELIVERY_FEE === '15' || settings.DEFAULT_DELIVERY_FEE === '15.00' || settings.DEFAULT_DELIVERY_FEE === 15) {
       settings.DEFAULT_DELIVERY_FEE = '10';
     }
+
+    // Attach active batch information
+    try {
+      const { checkIfPaymentsAllowed, getActiveBatches } = require('./batchController');
+      const batchCheck = await checkIfPaymentsAllowed();
+      settings.batch_open = batchCheck.allowed;
+      settings.current_batch = batchCheck.currentBatch;
+      settings.next_batch = batchCheck.nextBatch;
+      settings.batch_message = batchCheck.message;
+    } catch (e) {}
+
     return res.json({ success: true, settings });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to fetch public settings.' });

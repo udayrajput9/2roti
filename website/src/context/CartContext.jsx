@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isCurryOrThaliItem, isBreadOrAddonItem } from '../utils/comboValidation';
+import { trackCartAdd, trackCartRemove } from '../utils/activityTracker';
 
 const CartContext = createContext(null);
 
@@ -45,10 +46,13 @@ export function CartProvider({ children }) {
       }
       return [...prev, { ...item, quantity: 1 }];
     });
+    // Trigger lightweight activity tracking
+    trackCartAdd(item, 1);
     return true;
   };
 
   const removeFromCart = (itemId) => {
+    trackCartRemove(itemId);
     setCartItems(prev => prev.filter(i => i.id !== itemId));
   };
 

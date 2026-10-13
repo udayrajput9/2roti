@@ -19,6 +19,7 @@ const vendorRoutes = require('./routes/vendorRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const securityRoutes = require('./routes/securityRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const activityRoutes = require('./routes/activityRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -67,6 +68,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/runner', require('./routes/runnerRoutes'));
 app.use('/api/chat', chatRoutes);
+app.use('/api/activity', activityRoutes);
+app.use('/api/batches', require('./routes/batchRoutes'));
 
 // Public Settings Route
 app.get('/api/settings', require('./controllers/statsController').getPublicSettings);

@@ -15,18 +15,27 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isHalted, setIsHalted] = useState(false);
+  const [batchInfo, setBatchInfo] = useState(null);
   const [idempotencyKey] = useState(() => Math.random().toString(36).substring(2, 15) + Date.now().toString(36));
 
   const chosenLocation = activeLocation || locations[0];
 
   useEffect(() => {
-    // Check if kitchen/admin has stopped payments & orders
+    // Check if kitchen/admin has stopped payments & orders and active batches
     fetch('/api/settings')
       .then(r => r.json())
       .then(d => {
         if (d.success && d.settings) {
           const halted = d.settings.emergency_stop_payments === 'true' || d.settings.kitchen_status === 'STOPPED';
           setIsHalted(halted);
+          if (d.settings.batch_open !== undefined) {
+            setBatchInfo({
+              batch_open: d.settings.batch_open,
+              current_batch: d.settings.current_batch,
+              next_batch: d.settings.next_batch,
+              batch_message: d.settings.batch_message
+            });
+          }
         }
       })
       .catch(() => {});
@@ -48,16 +57,22 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
       return;
     }
 
-    // IST time check: allow payment only between 15:00-18:00 IST
-    const now = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const istTime = new Date(now.getTime() + istOffset);
-    const istHours = istTime.getUTCHours();
-    const istMinutes = istTime.getUTCMinutes();
-    const totalMinutes = istHours * 60 + istMinutes;
-    if (totalMinutes < 900 || totalMinutes >= 1080) { // 900=3PM, 1080=6PM
-      setError('Orders are accepted only between 3:00 PM and 6:00 PM IST.');
+    // Dynamic Batch payment check (verified against active batches from backend)
+    if (batchInfo && batchInfo.batch_open === false) {
+      setError(batchInfo.batch_message || 'Orders are currently closed outside active batch hours.');
       return;
+    }
+
+    // Fallback IST time check if batchInfo is still loading
+    if (!batchInfo) {
+      const now = new Date();
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const istTime = new Date(now.getTime() + istOffset);
+      const totalMinutes = istTime.getUTCHours() * 60 + istTime.getUTCMinutes();
+      if (totalMinutes < 900 || totalMinutes >= 1080) {
+        setError('Orders are accepted only during scheduled batches.');
+        return;
+      }
     }
 
     if (!isAuthenticated) {

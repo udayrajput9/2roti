@@ -6,6 +6,8 @@ import VendorSettlements from './pages/VendorSettlements';
 import MenuManagement from './pages/MenuManagement';
 import CampusLocations from './pages/CampusLocations';
 import CustomerDirectory from './pages/CustomerDirectory';
+import UserActivity from './pages/UserActivity';
+import BatchManagement from './pages/BatchManagement';
 import PaymentsWebhooks from './pages/PaymentsWebhooks';
 import Refunds from './pages/Refunds';
 import StaffRBAC from './pages/StaffRBAC';
@@ -61,7 +63,9 @@ function ERPContent() {
           {activeTab === 'support_chat' && <SupportChat />}
           {(activeTab === 'menu_management' || activeTab === 'menu_upload') && <MenuManagement />}
           {activeTab === 'locations' && <CampusLocations />}
+          {activeTab === 'batches' && <BatchManagement />}
           {activeTab === 'customers' && <CustomerDirectory />}
+          {activeTab === 'user_activity' && <UserActivity />}
           {activeTab === 'vendor_portal' && <VendorSettlements />}
           {activeTab === 'payments' && <PaymentsWebhooks />}
           {activeTab === 'refunds' && <Refunds />}

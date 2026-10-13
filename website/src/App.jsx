@@ -18,6 +18,7 @@ import PolicyModal from './components/PolicyModal';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { trackPageView, trackOnboardingView } from './utils/activityTracker';
 
 function WebsiteContent() {
   const { user, isAuthenticated, isProfileComplete } = useAuth();
@@ -78,6 +79,18 @@ function WebsiteContent() {
 
   const [locations, setLocations] = useState([]);
   const [activeLocation, setActiveLocation] = useState(null);
+
+  // Track page view events
+  useEffect(() => {
+    trackPageView(activeTab, user);
+  }, [activeTab, user]);
+
+  // Track onboarding modal appearance for incomplete Google sign-ins
+  useEffect(() => {
+    if (isAuthenticated && !isProfileComplete) {
+      trackOnboardingView(user);
+    }
+  }, [isAuthenticated, isProfileComplete, user]);
   const [menu, setMenu] = useState(() => {
     try {
       const cached = sessionStorage.getItem('2roti_cached_menu');
