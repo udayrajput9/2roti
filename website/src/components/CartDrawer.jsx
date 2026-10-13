@@ -107,16 +107,6 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }) {
               </div>
             </div>
           )}
-
-          {/* Outlet items disclaimer banner */}
-          {hasOutletItems && (
-            <div className="mt-3 p-3 rounded-2xl bg-amber-950/40 border border-amber-800/60 text-[11px] text-amber-200 flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <span>
-                <strong>Outlet Order:</strong> Your basket contains counter dishes for direct pickup at the Jhungiya Outlet.
-              </span>
-            </div>
-          )}
         </div>
 
         {/* 2. Cart Items List */}
