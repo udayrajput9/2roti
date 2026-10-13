@@ -15,27 +15,18 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isHalted, setIsHalted] = useState(false);
-  const [batchInfo, setBatchInfo] = useState(null);
   const [idempotencyKey] = useState(() => Math.random().toString(36).substring(2, 15) + Date.now().toString(36));
 
   const chosenLocation = activeLocation || locations[0];
 
   useEffect(() => {
-    // Check if kitchen/admin has stopped payments & orders and active batches
+    // Check if kitchen/admin has stopped payments & orders
     fetch('/api/settings')
       .then(r => r.json())
       .then(d => {
         if (d.success && d.settings) {
           const halted = d.settings.emergency_stop_payments === 'true' || d.settings.kitchen_status === 'STOPPED';
           setIsHalted(halted);
-          if (d.settings.batch_open !== undefined) {
-            setBatchInfo({
-              batch_open: d.settings.batch_open,
-              current_batch: d.settings.current_batch,
-              next_batch: d.settings.next_batch,
-              batch_message: d.settings.batch_message
-            });
-          }
         }
       })
       .catch(() => {});
@@ -54,31 +45,6 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
     // Emergency Killswitch check
     if (isHalted) {
       setError('Online orders and payments have been temporarily stopped by kitchen administration.');
-      return;
-    }
-
-    // Dynamic Batch payment check (verified against active batches from backend)
-    let activeBatchOpen = batchInfo ? batchInfo.batch_open : null;
-    let batchMessage = batchInfo ? batchInfo.batch_message : '';
-    if (activeBatchOpen === null) {
-      try {
-        const checkRes = await fetch('/api/settings');
-        const checkData = await checkRes.json();
-        if (checkData.success && checkData.settings) {
-          activeBatchOpen = checkData.settings.batch_open;
-          batchMessage = checkData.settings.batch_message;
-          setBatchInfo({
-            batch_open: checkData.settings.batch_open,
-            current_batch: checkData.settings.current_batch,
-            next_batch: checkData.settings.next_batch,
-            batch_message: checkData.settings.batch_message
-          });
-        }
-      } catch (e) {}
-    }
-
-    if (activeBatchOpen === false) {
-      setError(batchMessage || 'Orders and payments are currently closed outside active batch hours.');
       return;
     }
 
@@ -207,27 +173,14 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
           <p className="text-xs text-neutral-400">{hasOutletItems ? 'Jhungiya Outlet Counter' : chosenLocation?.name}</p>
         </div>
 
-        {/* Disclaimer Text */}
-        <div className="mt-4 p-3.5 bg-amber-950/40 border border-amber-900/50 rounded-2xl text-center space-y-1">
-          <div className="flex items-center justify-center gap-1.5 text-amber-300 font-black text-xs">
+        {/* Campus Delivery Timing Note */}
+        <div className="mt-4 p-3.5 bg-neutral-900/60 border border-neutral-800 rounded-2xl text-center space-y-1">
+          <div className="flex items-center justify-center gap-1.5 text-amber-400 font-bold text-xs">
             <Clock className="w-3.5 h-3.5 text-amber-400" />
-            <span>
-              {batchInfo?.current_batch
-                ? `Active Batch: ${batchInfo.current_batch.name}`
-                : 'Scheduled Campus Delivery Batch'}
-            </span>
+            <span>Campus Gate Delivery</span>
           </div>
-          <p className="text-amber-400/90 font-medium text-[11px] leading-relaxed">
-            {batchInfo?.current_batch ? (
-              <span>
-                Hot meals deliver to your Institute gate at approximately{' '}
-                <strong className="text-white font-bold">{batchInfo.current_batch.dispatch_12h || 'scheduled batch time'}</strong>.
-              </span>
-            ) : (
-              <span>
-                Hot meals deliver directly to your campus gate at the scheduled batch delivery time.
-              </span>
-            )}
+          <p className="text-neutral-300 font-medium text-[11px] leading-relaxed">
+            Hot meals deliver directly to your campus gate during daily evening delivery dispatch (approx. 7:30 PM – 8:00 PM).
           </p>
         </div>
       </div>

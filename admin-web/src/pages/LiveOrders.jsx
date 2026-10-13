@@ -81,33 +81,14 @@ export default function LiveOrders({ activeTab = 'live_orders_active', onSelectT
   const [refreshing, setRefreshing] = useState(false);
   const [autoPdfPending, setAutoPdfPending] = useState(false);
 
-  // Auto PDF Generation check: dynamically synced with active batch slips_ready_time (default 18:05/18:10 IST)
+  // Auto PDF Generation check at 18:05 IST (6:05 PM)
   useEffect(() => {
-    let activePdfMins = 1085; // default 18:05 IST
-
-    const fetchBatchTime = async () => {
-      try {
-        const res = await fetch('/api/batches');
-        const d = await res.json();
-        if (d.success && d.active_batches && d.active_batches.length > 0) {
-          const cur = d.current_batch || d.active_batches[0];
-          if (cur && cur.slips_ready_time) {
-            const [h, m] = cur.slips_ready_time.split(':').map(Number);
-            activePdfMins = (h || 18) * 60 + (m || 10);
-          }
-        }
-      } catch (e) {}
-    };
-
-    fetchBatchTime();
-
     const checkPdfTime = () => {
-      fetchBatchTime();
       const now = new Date();
       const istOffset = 5.5 * 60 * 60 * 1000;
       const istTime = new Date(now.getTime() + istOffset);
       const totalMins = istTime.getUTCHours() * 60 + istTime.getUTCMinutes();
-      if (totalMins >= activePdfMins) {
+      if (totalMins >= 1085) { // 18:05 IST
         setAutoPdfPending(true);
       }
     };

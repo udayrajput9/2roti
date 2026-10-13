@@ -144,16 +144,7 @@ async function getPublicSettings(req, res) {
       settings.DEFAULT_DELIVERY_FEE = '10';
     }
 
-    // Attach active batch information
-    try {
-      const { getActiveBatchesData } = require('./batchController');
-      const batchData = await getActiveBatchesData();
-      settings.batch_open = batchData.is_open;
-      settings.current_batch = batchData.current_batch;
-      settings.next_batch = batchData.next_batch;
-      settings.batch_message = batchData.message;
-      settings.active_batches = batchData.active_batches;
-    } catch (e) {}
+    settings.batch_open = true;
 
     return res.json({ success: true, settings });
   } catch (err) {

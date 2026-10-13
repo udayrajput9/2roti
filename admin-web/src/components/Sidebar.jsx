@@ -24,7 +24,9 @@ import {
   ListOrdered,
   Sparkles,
   MessageSquare,
-  Activity
+  Activity,
+  Zap,
+  Printer
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { useLiveOrders } from '../context/LiveOrderContext';
@@ -136,9 +138,16 @@ export default function Sidebar({ activeTab, onSelectTab }) {
       roles: ['SUPER_ADMIN', 'ORDER_MANAGER']
     },
     {
-      id: 'batches',
-      label: 'Order Batches & Delivery Slots',
-      icon: Clock,
+      id: 'command_center',
+      label: 'Operations Command Center',
+      icon: Zap,
+      roles: ['SUPER_ADMIN', 'ORDER_MANAGER'],
+      highlight: true
+    },
+    {
+      id: 'daily_slips',
+      label: 'Daily Campus Order Slips',
+      icon: Printer,
       roles: ['SUPER_ADMIN', 'ORDER_MANAGER'],
       highlight: true
     },
