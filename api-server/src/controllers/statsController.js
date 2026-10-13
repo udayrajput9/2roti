@@ -146,12 +146,13 @@ async function getPublicSettings(req, res) {
 
     // Attach active batch information
     try {
-      const { checkIfPaymentsAllowed, getActiveBatches } = require('./batchController');
-      const batchCheck = await checkIfPaymentsAllowed();
-      settings.batch_open = batchCheck.allowed;
-      settings.current_batch = batchCheck.currentBatch;
-      settings.next_batch = batchCheck.nextBatch;
-      settings.batch_message = batchCheck.message;
+      const { getActiveBatchesData } = require('./batchController');
+      const batchData = await getActiveBatchesData();
+      settings.batch_open = batchData.is_open;
+      settings.current_batch = batchData.current_batch;
+      settings.next_batch = batchData.next_batch;
+      settings.batch_message = batchData.message;
+      settings.active_batches = batchData.active_batches;
     } catch (e) {}
 
     return res.json({ success: true, settings });

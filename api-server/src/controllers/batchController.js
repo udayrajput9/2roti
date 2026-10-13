@@ -81,7 +81,7 @@ async function checkIfPaymentsAllowed() {
         allowed,
         currentBatch: allowed ? { name: 'Dinner Batch (3 PM – 6 PM)', payment_start_time: '15:00', payment_end_time: '18:00' } : null,
         nextBatch: null,
-        message: allowed ? 'Payment window open' : 'Orders are accepted only between 3:00 PM and 6:00 PM IST.'
+        message: allowed ? 'Payment window open' : 'Orders are accepted only during scheduled batch hours.'
       };
     }
 
@@ -122,24 +122,32 @@ async function checkIfPaymentsAllowed() {
   }
 }
 
+// Helper: Get Active Batches Data (used by public API and statsController)
+async function getActiveBatchesData() {
+  const ist = getCurrentIST();
+  const batches = await db('order_batches').where({ is_active: true }).orderBy('payment_start_time', 'asc');
+  const enriched = batches.map(b => enrichBatch(b, ist));
+
+  const check = await checkIfPaymentsAllowed();
+
+  return {
+    is_open: check.allowed,
+    current_batch: check.currentBatch,
+    next_batch: check.nextBatch,
+    message: check.message,
+    active_batches: enriched,
+    server_time_ist: ist.timeStr,
+    server_time_12h: format12Hour(ist.timeStr)
+  };
+}
+
 // 1. Public API: Get Active Batches & Current Open Batch
 async function getActiveBatches(req, res) {
   try {
-    const ist = getCurrentIST();
-    const batches = await db('order_batches').where({ is_active: true }).orderBy('payment_start_time', 'asc');
-    const enriched = batches.map(b => enrichBatch(b, ist));
-
-    const check = await checkIfPaymentsAllowed();
-
+    const data = await getActiveBatchesData();
     return res.json({
       success: true,
-      is_open: check.allowed,
-      current_batch: check.currentBatch,
-      next_batch: check.nextBatch,
-      message: check.message,
-      active_batches: enriched,
-      server_time_ist: ist.timeStr,
-      server_time_12h: format12Hour(ist.timeStr)
+      ...data
     });
   } catch (err) {
     console.error('getActiveBatches error:', err);
@@ -333,6 +341,7 @@ async function deleteBatch(req, res) {
 
 module.exports = {
   checkIfPaymentsAllowed,
+  getActiveBatchesData,
   getActiveBatches,
   getAllBatches,
   createBatch,

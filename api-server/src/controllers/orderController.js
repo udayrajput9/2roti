@@ -1018,7 +1018,7 @@ async function getDailyZoneTable(req, res) {
         <head><title>No Orders - ${zone}</title></head>
         <body style="font-family:system-ui,sans-serif;text-align:center;padding:50px;background:#f8fafc;color:#1e293b;">
           <h2>No active orders found for zone: ${zone.toUpperCase()}</h2>
-          <p style="color:#64748b;">Orders placed today between 3:00 PM and 6:00 PM IST will appear here automatically.</p>
+          <p style="color:#64748b;">Orders placed today during scheduled delivery batches will appear here automatically.</p>
         </body>
         </html>
       `);

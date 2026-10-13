@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Lock, ShieldCheck, AlertTriangle, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { isCurryOrThaliItem, isBreadOrAddonItem } from '../utils/comboValidation';
@@ -58,21 +58,28 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
     }
 
     // Dynamic Batch payment check (verified against active batches from backend)
-    if (batchInfo && batchInfo.batch_open === false) {
-      setError(batchInfo.batch_message || 'Orders are currently closed outside active batch hours.');
-      return;
+    let activeBatchOpen = batchInfo ? batchInfo.batch_open : null;
+    let batchMessage = batchInfo ? batchInfo.batch_message : '';
+    if (activeBatchOpen === null) {
+      try {
+        const checkRes = await fetch('/api/settings');
+        const checkData = await checkRes.json();
+        if (checkData.success && checkData.settings) {
+          activeBatchOpen = checkData.settings.batch_open;
+          batchMessage = checkData.settings.batch_message;
+          setBatchInfo({
+            batch_open: checkData.settings.batch_open,
+            current_batch: checkData.settings.current_batch,
+            next_batch: checkData.settings.next_batch,
+            batch_message: checkData.settings.batch_message
+          });
+        }
+      } catch (e) {}
     }
 
-    // Fallback IST time check if batchInfo is still loading
-    if (!batchInfo) {
-      const now = new Date();
-      const istOffset = 5.5 * 60 * 60 * 1000;
-      const istTime = new Date(now.getTime() + istOffset);
-      const totalMinutes = istTime.getUTCHours() * 60 + istTime.getUTCMinutes();
-      if (totalMinutes < 900 || totalMinutes >= 1080) {
-        setError('Orders are accepted only during scheduled batches.');
-        return;
-      }
+    if (activeBatchOpen === false) {
+      setError(batchMessage || 'Orders and payments are currently closed outside active batch hours.');
+      return;
     }
 
     if (!isAuthenticated) {
@@ -201,9 +208,26 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
         </div>
 
         {/* Disclaimer Text */}
-        <div className="mt-4 p-3 bg-amber-950/40 border border-amber-900/50 rounded-2xl">
-          <p className="text-amber-400 font-bold text-[11px] leading-relaxed text-center">
-            Your order will be delivered to your Institute gate at 8 PM only. Please do not proceed if you are ordering for the day.
+        <div className="mt-4 p-3.5 bg-amber-950/40 border border-amber-900/50 rounded-2xl text-center space-y-1">
+          <div className="flex items-center justify-center gap-1.5 text-amber-300 font-black text-xs">
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span>
+              {batchInfo?.current_batch
+                ? `Active Batch: ${batchInfo.current_batch.name}`
+                : 'Scheduled Campus Delivery Batch'}
+            </span>
+          </div>
+          <p className="text-amber-400/90 font-medium text-[11px] leading-relaxed">
+            {batchInfo?.current_batch ? (
+              <span>
+                Hot meals deliver to your Institute gate at approximately{' '}
+                <strong className="text-white font-bold">{batchInfo.current_batch.dispatch_12h || 'scheduled batch time'}</strong>.
+              </span>
+            ) : (
+              <span>
+                Hot meals deliver directly to your campus gate at the scheduled batch delivery time.
+              </span>
+            )}
           </p>
         </div>
       </div>

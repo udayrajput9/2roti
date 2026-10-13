@@ -369,21 +369,37 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
 
       {/* Dynamic Batch Schedule Banner */}
       {batchSettings?.batch_open ? (
-        <div className="bg-emerald-950/70 border border-emerald-500/50 rounded-2xl p-3 flex items-center justify-center gap-2 text-emerald-300 text-xs sm:text-sm font-black shadow-md">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>
-            🟢 Orders Open: {batchSettings.current_batch?.name || 'Active Batch'} ({batchSettings.current_batch?.payment_start_12h || '3:00 PM'} – {batchSettings.current_batch?.payment_end_12h || '6:00 PM'} IST)
-          </span>
+        <div className="bg-emerald-950/70 border border-emerald-500/50 rounded-2xl p-3 flex flex-col items-center justify-center gap-1 text-emerald-300 text-xs sm:text-sm font-black shadow-md text-center">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+            <span>
+              🟢 Orders Open: {batchSettings.current_batch?.name || 'Active Batch'} ({batchSettings.current_batch?.payment_start_12h || 'Live'} – {batchSettings.current_batch?.payment_end_12h || 'Closed'} IST)
+            </span>
+          </div>
+          {batchSettings?.active_batches && batchSettings.active_batches.length > 1 && (
+            <div className="text-[11px] text-emerald-400/80 font-normal">
+              Today's Slots: {batchSettings.active_batches.map(b => `${b.name} (${b.payment_start_12h}–${b.payment_end_12h})`).join(' • ')}
+            </div>
+          )}
         </div>
       ) : batchSettings?.next_batch ? (
-        <div className="bg-amber-950/70 border border-amber-500/50 rounded-2xl p-3 flex items-center justify-center gap-2 text-amber-300 text-xs sm:text-sm font-black shadow-md">
-          <span>
-            ⏰ Next Order Batch: {batchSettings.next_batch.name} opens at {batchSettings.next_batch.payment_start_12h} IST
-          </span>
+        <div className="bg-amber-950/70 border border-amber-500/50 rounded-2xl p-3 flex flex-col items-center justify-center gap-1 text-amber-300 text-xs sm:text-sm font-black shadow-md text-center">
+          <div className="flex items-center gap-2">
+            <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span>
+              ⏰ Next Order Batch: {batchSettings.next_batch.name} opens at {batchSettings.next_batch.payment_start_12h} IST
+            </span>
+          </div>
+          {batchSettings?.active_batches && batchSettings.active_batches.length > 1 && (
+            <div className="text-[11px] text-amber-400/80 font-normal">
+              All Slots: {batchSettings.active_batches.map(b => `${b.name} (${b.payment_start_12h}–${b.payment_end_12h})`).join(' • ')}
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-amber-950/60 border border-amber-500/50 rounded-2xl p-3 flex items-center justify-center gap-2 text-amber-300 text-xs sm:text-sm font-black shadow-md">
-          <span>⏰ Orders accepted: 3 PM – 6 PM IST only</span>
+          <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span>⏰ Orders accepted during scheduled campus delivery batches</span>
         </div>
       )}
 
