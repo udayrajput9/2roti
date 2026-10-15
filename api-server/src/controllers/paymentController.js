@@ -25,7 +25,7 @@ async function createRazorpayOrder(req, res) {
     if (haltRow && haltRow.value === 'true') {
       return res.status(403).json({
         success: false,
-        message: 'Online payment collection is currently stopped by the kitchen management.'
+        message: 'Please continue order tomorrow from 8:00 AM to 7:00 PM.'
       });
     }
 

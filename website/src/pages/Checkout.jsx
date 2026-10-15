@@ -8,7 +8,7 @@ const RAZORPAY_KEY = 'rzp_test_2rotiDemoKey123'; // Used strictly as a fallback 
 
 export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], activeLocation }) {
   const { user, isAuthenticated, refreshUser } = useAuth();
-  const { cartItems, itemsTotal, deliveryFee, grandTotal, hasOutletItems, clearCart } = useCart();
+  const { cartItems, itemsTotal, deliveryFee, grandTotal, hasOutletItems, clearCart, isPaymentsStopped, paymentsClosedMessage } = useCart();
 
   const [addressNote, setAddressNote] = useState('');
   const [hpTrap, setHpTrap] = useState('');
@@ -18,6 +18,7 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
   const [idempotencyKey] = useState(() => Math.random().toString(36).substring(2, 15) + Date.now().toString(36));
 
   const chosenLocation = activeLocation || locations[0];
+  const halted = isHalted || isPaymentsStopped;
 
   useEffect(() => {
     // Check if kitchen/admin has stopped payments & orders
@@ -25,8 +26,8 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
       .then(r => r.json())
       .then(d => {
         if (d.success && d.settings) {
-          const halted = d.settings.emergency_stop_payments === 'true' || d.settings.kitchen_status === 'STOPPED';
-          setIsHalted(halted);
+          const isHalt = d.settings.emergency_stop_payments === 'true' || d.settings.kitchen_status === 'STOPPED';
+          setIsHalted(isHalt);
         }
       })
       .catch(() => {});
@@ -43,8 +44,8 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
 
   const handlePlaceOrder = async () => {
     // Emergency Killswitch check
-    if (isHalted) {
-      setError('Online orders and payments have been temporarily stopped by kitchen administration.');
+    if (halted) {
+      setError('Please continue order tomorrow from 8:00 AM to 7:00 PM.');
       return;
     }
 
@@ -226,27 +227,30 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
       <input type="text" name="_hp_trap" value={hpTrap} onChange={(e) => setHpTrap(e.target.value)} tabIndex={-1} autoComplete="off" className="hidden" />
 
       {/* Emergency Halt Notice */}
-      {isHalted && (
-        <div className="p-3.5 rounded-2xl bg-rose-950/90 border border-rose-500/70 text-rose-200 text-xs font-bold flex items-center gap-2.5 shadow-lg">
-          <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
-          <span>Kitchen administration has temporarily stopped online payments and order placements. Checkout is paused.</span>
+      {halted && (
+        <div className="p-3.5 rounded-2xl bg-amber-950/90 border border-amber-500/70 text-amber-200 text-xs font-bold flex items-center gap-2.5 shadow-lg">
+          <Clock className="w-5 h-5 text-amber-400 shrink-0" />
+          <span>Please continue order tomorrow from 8:00 AM to 7:00 PM.</span>
         </div>
       )}
 
       {/* 3. Place Order CTA */}
       <button
         onClick={handlePlaceOrder}
-        disabled={loading || isHalted}
+        disabled={loading || halted}
         className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_8px_28px_rgba(255,87,34,0.4)] active:scale-95 disabled:opacity-50 transition-all group ${
-          isHalted
-            ? 'bg-neutral-800 text-neutral-400 cursor-not-allowed border border-neutral-700'
+          halted
+            ? 'bg-neutral-800 text-amber-300/80 cursor-not-allowed border border-amber-600/40 text-[11px] leading-tight px-2'
             : 'bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#F4511E] hover:to-[#D84315] text-white'
         }`}
       >
         {loading ? (
           <span className="animate-pulse">Processing Payment...</span>
-        ) : isHalted ? (
-          <span>⛔ Ordering & Payments Temporarily Paused</span>
+        ) : halted ? (
+          <span className="flex items-center gap-1.5">
+            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Please Continue Order Tomorrow (8 AM - 7 PM)</span>
+          </span>
         ) : (
           <>
             <Lock className="w-4 h-4" />

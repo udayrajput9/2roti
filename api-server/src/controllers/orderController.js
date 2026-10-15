@@ -27,7 +27,7 @@ async function createOrder(req, res) {
     if (haltRow && haltRow.value === 'true') {
       return res.status(403).json({
         success: false,
-        message: 'Kitchen is currently not accepting new orders or payments. Orders are temporarily stopped.'
+        message: 'Please continue order tomorrow from 8:00 AM to 7:00 PM.'
       });
     }
 

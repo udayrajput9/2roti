@@ -38,7 +38,7 @@ import { useCart } from '../context/CartContext';
 export default function Home({ menu = {}, loading = false, onOpenCart, onChangeTab, initialCategory = 'Curry' }) {
   const [activeCategory, setActiveCategory] = useState(initialCategory || 'Curry');
   const [dietaryFilter, setDietaryFilter] = useState('ALL'); // 'ALL' | 'VEG' | 'NON_VEG' | 'UNDER_100'
-  const { cartItems, totalCount, itemsTotal, addToCart, updateQuantity, getItemQty, sysSettings } = useCart();
+  const { cartItems, totalCount, itemsTotal, addToCart, updateQuantity, getItemQty, sysSettings, isPaymentsStopped, paymentsClosedMessage } = useCart();
 
   // Dynamic time-based greeting
   const mealContext = useMemo(() => {
@@ -219,6 +219,14 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
   return (
     <div className="pb-32 md:pb-16 pt-3 px-3 sm:px-4 max-w-4xl mx-auto space-y-7 animate-in fade-in duration-300">
       
+      {/* Admin Payments Stopped Banner */}
+      {isPaymentsStopped && (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-950/95 via-orange-950/95 to-amber-950/95 border border-amber-500/70 text-amber-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-2.5 shadow-lg text-center animate-pulse">
+          <Clock className="w-5 h-5 text-amber-400 shrink-0" />
+          <span>Please continue order tomorrow from 8:00 AM to 7:00 PM.</span>
+        </div>
+      )}
+
       {/* 1. Live Campus Time Status Bar */}
       <div className="flex items-center justify-between text-[11px] font-bold px-1">
         <div className="flex items-center gap-1.5 text-neutral-300">

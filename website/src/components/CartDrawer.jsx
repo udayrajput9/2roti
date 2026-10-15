@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, MapPin, Sparkles, ShieldCheck, Zap } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, MapPin, Sparkles, ShieldCheck, Zap, Clock, AlertTriangle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { FoodClassBadge, RotiBreadIcon } from './FoodIcons';
 import { isCurryOrThaliItem, isBreadOrAddonItem } from '../utils/comboValidation';
@@ -44,7 +44,7 @@ const RECOMMENDED_ADDONS = [
 ];
 
 export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }) {
-  const { cartItems, totalCount, itemsTotal, deliveryFee, grandTotal, hasOutletItems, addToCart, updateQuantity, removeFromCart } = useCart();
+  const { cartItems, totalCount, itemsTotal, deliveryFee, grandTotal, hasOutletItems, addToCart, updateQuantity, removeFromCart, isPaymentsStopped, paymentsClosedMessage } = useCart();
 
   if (!isOpen) return null;
 
@@ -290,9 +290,21 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }) {
               </div>
             </div>
 
+            {/* Payments Stopped Warning */}
+            {isPaymentsStopped && (
+              <div className="p-3 rounded-2xl bg-amber-950/80 border border-amber-500/70 text-amber-200 text-xs font-bold flex items-center gap-2.5 shadow-md">
+                <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Please continue order tomorrow from 8:00 AM to 7:00 PM.</span>
+              </div>
+            )}
+
             {/* Checkout CTA */}
             <button
               onClick={() => {
+                if (isPaymentsStopped) {
+                  alert(paymentsClosedMessage);
+                  return;
+                }
                 if (!hasCurryOrThali && cartItems.some(isBreadOrAddonItem)) {
                   alert('⚠️ Roti & Breads can only be ordered in a combo with Curry or Thali. Please add a Curry or Thali first!');
                   return;
@@ -300,10 +312,24 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }) {
                 onClose();
                 onProceedToCheckout();
               }}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#F4511E] hover:to-[#D84315] text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(255,87,34,0.4)] active:scale-95 transition-all group"
+              disabled={isPaymentsStopped}
+              className={`w-full py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(255,87,34,0.4)] active:scale-95 transition-all group ${
+                isPaymentsStopped
+                  ? 'bg-neutral-800 text-amber-300/80 cursor-not-allowed border border-amber-600/40 text-[11px] leading-tight px-2'
+                  : 'bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#F4511E] hover:to-[#D84315] text-white'
+              }`}
             >
-              <span>Proceed to Campus Checkout</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              {isPaymentsStopped ? (
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Please Continue Order Tomorrow (8 AM - 7 PM)</span>
+                </span>
+              ) : (
+                <>
+                  <span>Proceed to Campus Checkout</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </button>
           </div>
         )}

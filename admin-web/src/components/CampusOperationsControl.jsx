@@ -251,7 +251,7 @@ export default function CampusOperationsControl() {
   const handleToggleKillswitch = async () => {
     const targetState = !isPaymentsStopped;
     const confirmPrompt = targetState
-      ? '⚠️ ARE YOU SURE you want to STOP ALL ORDERS & PAYMENTS?\n\nCustomers will be immediately blocked from paying or creating orders.'
+      ? '⚠️ ARE YOU SURE you want to STOP ALL ORDERS & PAYMENTS?\n\nCustomers will see: "Please continue order tomorrow from 8:00 AM to 7:00 PM." and checkout will be blocked.'
       : '✅ Resume online orders and payments?\n\nCustomers will be allowed to checkout again.';
 
     if (!window.confirm(confirmPrompt)) return;
@@ -569,7 +569,7 @@ export default function CampusOperationsControl() {
             </div>
             <p className="text-xs text-slate-300 mt-0.5">
               {isPaymentsStopped
-                ? 'All checkout payments & new order placements are blocked across website and app.'
+                ? 'All checkout payments & orders are stopped. Website message: "Please continue order tomorrow from 8:00 AM to 7:00 PM."'
                 : 'Students can place orders and make Razorpay online payments during kitchen hours.'}
             </p>
           </div>

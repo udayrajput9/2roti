@@ -31,7 +31,44 @@ export function CartProvider({ children }) {
     }
   }, [cartItems]);
 
+  const [sysSettings, setSysSettings] = useState({ delivery_fee: 10, free_delivery_threshold: 100 });
+
+  const fetchSettings = () => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.settings) {
+          setSysSettings({
+            ...d.settings,
+            delivery_fee: parseFloat(d.settings.delivery_fee) === 15 ? 10 : (parseFloat(d.settings.delivery_fee) || 10),
+            free_delivery_threshold: parseFloat(d.settings.free_delivery_threshold) || 100,
+          });
+        }
+      })
+      .catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchSettings();
+    const interval = setInterval(fetchSettings, 20000);
+    window.addEventListener('focus', fetchSettings);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', fetchSettings);
+    };
+  }, []);
+
+  const isPaymentsStopped = Boolean(
+    sysSettings.emergency_stop_payments === 'true' ||
+    sysSettings.kitchen_status === 'STOPPED'
+  );
+  const paymentsClosedMessage = 'Please continue order tomorrow from 8:00 AM to 7:00 PM.';
+
   const addToCart = (item) => {
+    if (isPaymentsStopped) {
+      alert(paymentsClosedMessage);
+      return false;
+    }
     if (isBreadOrAddonItem(item)) {
       const hasCurryOrThali = cartItems.some(i => isCurryOrThaliItem(i) && i.quantity > 0);
       if (!hasCurryOrThali) {
@@ -57,6 +94,10 @@ export function CartProvider({ children }) {
   };
 
   const updateQuantity = (itemId, delta) => {
+    if (isPaymentsStopped && delta > 0) {
+      alert(paymentsClosedMessage);
+      return;
+    }
     setCartItems(prev => {
       return prev
         .map(i => {
@@ -73,23 +114,6 @@ export function CartProvider({ children }) {
   const clearCart = () => {
     setCartItems([]);
   };
-
-  const [sysSettings, setSysSettings] = useState({ delivery_fee: 10, free_delivery_threshold: 100 });
-
-  useEffect(() => {
-    fetch('/api/settings')
-      .then(r => r.json())
-      .then(d => {
-        if (d.success && d.settings) {
-          setSysSettings({
-            ...d.settings,
-            delivery_fee: parseFloat(d.settings.delivery_fee) === 15 ? 10 : (parseFloat(d.settings.delivery_fee) || 10),
-            free_delivery_threshold: parseFloat(d.settings.free_delivery_threshold) || 100,
-          });
-        }
-      })
-      .catch(console.error);
-  }, []);
 
   // Algorithm Optimization: useMemo + Single-Pass Accumulator O(N)
   // Replaces 3 separate array passes (reduce, reduce, some) and caches value across non-cart re-renders
@@ -138,6 +162,9 @@ export function CartProvider({ children }) {
     <CartContext.Provider
       value={{
         sysSettings,
+        isPaymentsStopped,
+        paymentsClosedMessage,
+        refreshSettings: fetchSettings,
         cartItems,
         totalCount,
         itemsTotal,
