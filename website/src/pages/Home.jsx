@@ -481,7 +481,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
                 ) : (
                   <div className="flex items-center justify-between bg-neutral-900 border border-[#FF5722] rounded-xl p-1 shadow-md">
                     <button
-                      onClick={() => updateQuantity(rotiDealItem.id, getItemQty(rotiDealItem.id) - 1)}
+                      onClick={() => updateQuantity(rotiDealItem.id, -1)}
                       className="w-6 h-6 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white flex items-center justify-center active:scale-90"
                     >
                       <Minus className="w-3 h-3" />
@@ -490,7 +490,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
                       {getItemQty(rotiDealItem.id)}
                     </span>
                     <button
-                      onClick={() => updateQuantity(rotiDealItem.id, getItemQty(rotiDealItem.id) + 1)}
+                      onClick={() => updateQuantity(rotiDealItem.id, 1)}
                       className="w-6 h-6 rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white flex items-center justify-center active:scale-90"
                     >
                       <Plus className="w-3 h-3" />
@@ -565,7 +565,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
                 ) : (
                   <div className="flex items-center justify-between bg-neutral-900 border border-[#FF5722] rounded-xl p-1 shadow-md">
                     <button
-                      onClick={() => updateQuantity(puriDealItem.id, getItemQty(puriDealItem.id) - 1)}
+                      onClick={() => updateQuantity(puriDealItem.id, -1)}
                       className="w-6 h-6 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white flex items-center justify-center active:scale-90"
                     >
                       <Minus className="w-3 h-3" />
@@ -574,7 +574,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
                       {getItemQty(puriDealItem.id)}
                     </span>
                     <button
-                      onClick={() => updateQuantity(puriDealItem.id, getItemQty(puriDealItem.id) + 1)}
+                      onClick={() => updateQuantity(puriDealItem.id, 1)}
                       className="w-6 h-6 rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white flex items-center justify-center active:scale-90"
                     >
                       <Plus className="w-3 h-3" />

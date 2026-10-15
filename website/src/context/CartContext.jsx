@@ -40,9 +40,9 @@ export function CartProvider({ children }) {
       }
     }
     setCartItems(prev => {
-      const existing = prev.find(i => i.id === item.id);
+      const existing = prev.find(i => String(i.id) === String(item.id));
       if (existing) {
-        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+        return prev.map(i => String(i.id) === String(item.id) ? { ...i, quantity: Math.min(i.quantity + 1, 50) } : i);
       }
       return [...prev, { ...item, quantity: 1 }];
     });
@@ -53,15 +53,15 @@ export function CartProvider({ children }) {
 
   const removeFromCart = (itemId) => {
     trackCartRemove(itemId);
-    setCartItems(prev => prev.filter(i => i.id !== itemId));
+    setCartItems(prev => prev.filter(i => String(i.id) !== String(itemId)));
   };
 
   const updateQuantity = (itemId, delta) => {
     setCartItems(prev => {
       return prev
         .map(i => {
-          if (i.id === itemId) {
-            const newQty = i.quantity + delta;
+          if (String(i.id) === String(itemId)) {
+            const newQty = Math.min(Math.max(0, i.quantity + delta), 50);
             return newQty > 0 ? { ...i, quantity: newQty } : null;
           }
           return i;
@@ -125,6 +125,7 @@ export function CartProvider({ children }) {
     const map = new Map();
     for (let i = 0; i < cartItems.length; i++) {
       map.set(cartItems[i].id, cartItems[i].quantity);
+      map.set(String(cartItems[i].id), cartItems[i].quantity);
     }
     return map;
   }, [cartItems]);
