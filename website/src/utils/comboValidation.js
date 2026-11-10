@@ -34,7 +34,7 @@ export function isBreadOrAddonItem(item) {
     name.includes('paratha') ||
     name.includes('naan') ||
     name.includes('kulcha') ||
-    name.includes('chawal+roti')
+    name.includes('chawal+roti') || (name.includes('chawal') && name.includes('roti'))
   ) {
     return true;
   }

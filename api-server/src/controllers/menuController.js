@@ -22,6 +22,7 @@ function invalidateLocationsCache() {
 // 1. Get All Menu Items (Categorized)
 async function getMenu(req, res) {
   try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const now = Date.now();
     if (cachedMenu && now < cacheExpiresAt) {
       return res.json({
@@ -86,6 +87,7 @@ async function getMenu(req, res) {
 // 2. Get Outlet Specific Menu
 async function getOutletMenu(req, res) {
   try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const items = await db('menu_items')
       .where(function() {
         this.where('is_available', true).orWhere('is_available', 1);
@@ -192,6 +194,7 @@ async function uploadMenuCsv(req, res) {
       });
     });
 
+    invalidateMenuCache();
     return res.json({
       success: true,
       message: `Menu synced successfully: ${addedCount} added, ${updatedCount} updated.`,
@@ -308,6 +311,7 @@ async function createMenuItem(req, res) {
 
     const created = await db('menu_items').where({ id: newId }).first();
 
+    invalidateMenuCache();
     return res.json({
       success: true,
       message: `Dish "${cleanName}" created successfully!`,
@@ -352,6 +356,7 @@ async function updateMenuItem(req, res) {
     await db('menu_items').where({ id }).update(updateData);
     const updated = await db('menu_items').where({ id }).first();
 
+    invalidateMenuCache();
     return res.json({
       success: true,
       message: `Dish "${updated.name}" updated successfully!`,
@@ -383,6 +388,7 @@ async function toggleItemAvailability(req, res) {
     const newStatus = !item.is_available;
     await db('menu_items').where({ id }).update({ is_available: newStatus });
 
+    invalidateMenuCache();
     return res.json({
       success: true,
       message: `"${item.name}" is now ${newStatus ? 'IN STOCK (Available)' : 'OUT OF STOCK (Unavailable)'}.`,
@@ -405,6 +411,7 @@ async function deleteMenuItem(req, res) {
 
     await db('menu_items').where({ id }).del();
 
+    invalidateMenuCache();
     return res.json({
       success: true,
       message: `Dish "${item.name}" deleted from menu.`

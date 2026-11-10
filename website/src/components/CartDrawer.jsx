@@ -43,13 +43,37 @@ const RECOMMENDED_ADDONS = [
   }
 ];
 
-export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }) {
+export default function CartDrawer({ isOpen, onClose, onProceedToCheckout, allMenuItems = [], outletItems = [] }) {
   const { cartItems, totalCount, itemsTotal, deliveryFee, grandTotal, hasOutletItems, addToCart, updateQuantity, removeFromCart, isPaymentsStopped, paymentsClosedMessage } = useCart();
 
   if (!isOpen) return null;
 
   // Check if cart has Curry or Thali dish
   const hasCurryOrThali = cartItems.some(isCurryOrThaliItem);
+
+  // Dynamic add-ons with prices synced from database/admin
+  const dynamicAddons = React.useMemo(() => {
+    const combined = [...(allMenuItems || []), ...(outletItems || [])];
+    return RECOMMENDED_ADDONS.map(addon => {
+      const match = combined.find(item => {
+        if (item.id && Number(item.id) === Number(addon.id)) return true;
+        const itemName = (item.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const addonName = (addon.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return itemName.includes(addonName) || addonName.includes(itemName);
+      });
+      if (match) {
+        return {
+          ...addon,
+          id: match.id,
+          customer_price: parseFloat(match.customer_price),
+          vendor_cost: parseFloat(match.vendor_cost || addon.vendor_cost),
+          is_available: match.is_available !== false && match.is_available !== 0
+        };
+      }
+      return addon;
+    });
+  }, [allMenuItems, outletItems]);
+
 
   const freeDeliveryThreshold = 100;
   const remainingForFreeDelivery = Math.max(0, freeDeliveryThreshold - itemsTotal);
@@ -191,7 +215,7 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout }) {
                   </p>
 
                   <div className="space-y-2">
-                    {RECOMMENDED_ADDONS.map(addon => {
+                    {dynamicAddons.map(addon => {
                       const inCart = cartItems.find(i => i.id === addon.id || (i.name && i.name.toLowerCase() === addon.name.toLowerCase()));
                       const qty = inCart ? inCart.quantity : 0;
 

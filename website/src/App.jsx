@@ -144,9 +144,9 @@ function WebsiteContent() {
     async function initData() {
       try {
         const [locRes, menuRes, outRes] = await Promise.all([
-          fetch('/api/menu/locations').catch(() => null),
-          fetch('/api/menu').catch(() => null),
-          fetch('/api/menu/outlet').catch(() => null)
+          fetch('/api/menu/locations', { cache: 'no-store' }).catch(() => null),
+          fetch('/api/menu', { cache: 'no-store' }).catch(() => null),
+          fetch('/api/menu/outlet', { cache: 'no-store' }).catch(() => null)
         ]);
 
         // Process Locations
@@ -320,6 +320,8 @@ function WebsiteContent() {
       <CartDrawer
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
+        allMenuItems={menu.All || []}
+        outletItems={outletItems}
         onProceedToCheckout={() => {
           setIsCartOpen(false);
           if (!isAuthenticated) {

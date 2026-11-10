@@ -90,7 +90,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
   const rotiDealItem = useMemo(() => {
     const found = allMenuItems.find(i => (i.name || '').toLowerCase() === 'roti sabji' || (i.name || '').toLowerCase().includes('roti sabji'));
     if (found) {
-      return { ...found, customer_price: 30 };
+      return { ...found, customer_price: parseFloat(found.customer_price) };
     }
     return {
       id: 39,
@@ -106,7 +106,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
   const puriDealItem = useMemo(() => {
     const found = allMenuItems.find(i => (i.name || '').toLowerCase() === 'puri sabji' || (i.name || '').toLowerCase().includes('puri sabji'));
     if (found) {
-      return { ...found, customer_price: 30 };
+      return { ...found, customer_price: parseFloat(found.customer_price) };
     }
     return {
       id: 23,
@@ -118,6 +118,17 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
       description: '4 Hot golden puffed crispy puris served with spiced desi aloo curry & tangy pickle.'
     };
   }, [allMenuItems]);
+
+  // Dynamic pricing calculations for deal spotlight
+  const rotiPrice = rotiDealItem.customer_price;
+  const rotiOriginalPrice = Math.max(50, Math.round(rotiPrice * 1.35));
+  const rotiSavings = Math.max(0, rotiOriginalPrice - rotiPrice);
+  const rotiDiscountPct = rotiSavings > 0 ? Math.round((rotiSavings / rotiOriginalPrice) * 100) : 0;
+
+  const puriPrice = puriDealItem.customer_price;
+  const puriOriginalPrice = Math.max(50, Math.round(puriPrice * 1.35));
+  const puriSavings = Math.max(0, puriOriginalPrice - puriPrice);
+  const puriDiscountPct = puriSavings > 0 ? Math.round((puriSavings / puriOriginalPrice) * 100) : 0;
 
   const categories = useMemo(() => {
     const list = [
@@ -403,17 +414,17 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#FF5722] to-[#E64A19] text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm animate-pulse">
                 <Flame className="w-3 h-3 fill-white" />
-                <span>FLAT ₹30 • CRAZY STUDENT DEAL</span>
+                <span>SPECIAL MEAL • CRAZY STUDENT DEAL</span>
               </span>
               <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/80 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
                 Lowest Price in Campus
               </span>
             </div>
             <h3 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">
-              Campus Ki Sabse Sasti & Swadisht Deal — Sirf <span className="text-[#FF7043] underline decoration-amber-500 underline-offset-4">₹30 Me Pet Bharega!</span>
+              Campus Ki Sabse Sasti & Swadisht Deal — Sirf <span className="text-[#FF7043] underline decoration-amber-500 underline-offset-4">₹{rotiPrice} Me Pet Bharega!</span>
             </h3>
             <p className="text-xs text-neutral-300 mt-1 max-w-2xl leading-relaxed font-medium">
-              Daily pocket-friendly meal for hostel students. Freshly made hot Rotis or Golden Crispy Puris with authentic homestyle Sabzi at unbeatable ₹30 price!
+              Daily pocket-friendly meal for hostel students. Freshly made hot Rotis or Golden Crispy Puris with authentic homestyle Sabzi at unbeatable ₹{rotiPrice} price!
             </p>
           </div>
 
@@ -429,7 +440,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
           <div className="bg-[#18120E] border border-amber-600/40 hover:border-[#FF5722] rounded-3xl p-3.5 sm:p-4 flex gap-3.5 justify-between shadow-lg transition-all group relative overflow-hidden">
             {/* Discount Badge */}
             <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-[#FF5722] text-white text-[10px] font-black uppercase shadow-md">
-              40% OFF
+              {rotiDiscountPct > 0 ? `${rotiDiscountPct}% OFF` : 'SPECIAL MEAL'}
             </div>
 
             {/* Left: Info */}
@@ -456,11 +467,15 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
               </div>
 
               <div className="mt-2.5 flex items-baseline gap-2">
-                <span className="text-lg sm:text-xl font-black text-[#FF7043]">₹30</span>
-                <span className="text-xs text-neutral-500 line-through font-bold">₹50</span>
-                <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800/60">
-                  Save ₹20
-                </span>
+                <span className="text-lg sm:text-xl font-black text-[#FF7043]">₹{rotiPrice}</span>
+                {rotiSavings > 0 && (
+                  <>
+                    <span className="text-xs text-neutral-500 line-through font-bold">₹{rotiOriginalPrice}</span>
+                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800/60">
+                      Save ₹{rotiSavings}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 
@@ -484,7 +499,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
                     className="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#F4511E] hover:to-[#D84315] text-white font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center justify-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>ADD • ₹30</span>
+                    <span>ADD • ₹{rotiPrice}</span>
                   </button>
                 ) : (
                   <div className="flex items-center justify-between bg-neutral-900 border border-[#FF5722] rounded-xl p-1 shadow-md">
@@ -513,7 +528,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
           <div className="bg-[#18120E] border border-amber-600/40 hover:border-[#FF5722] rounded-3xl p-3.5 sm:p-4 flex gap-3.5 justify-between shadow-lg transition-all group relative overflow-hidden">
             {/* Discount Badge */}
             <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-[#FF5722] text-white text-[10px] font-black uppercase shadow-md">
-              40% OFF
+              {puriDiscountPct > 0 ? `${puriDiscountPct}% OFF` : 'SPECIAL MEAL'}
             </div>
 
             {/* Left: Info */}
@@ -540,11 +555,15 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
               </div>
 
               <div className="mt-2.5 flex items-baseline gap-2">
-                <span className="text-lg sm:text-xl font-black text-[#FF7043]">₹30</span>
-                <span className="text-xs text-neutral-500 line-through font-bold">₹50</span>
-                <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800/60">
-                  Save ₹20
-                </span>
+                <span className="text-lg sm:text-xl font-black text-[#FF7043]">₹{puriPrice}</span>
+                {puriSavings > 0 && (
+                  <>
+                    <span className="text-xs text-neutral-500 line-through font-bold">₹{puriOriginalPrice}</span>
+                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800/60">
+                      Save ₹{puriSavings}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 
@@ -568,7 +587,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
                     className="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-[#FF5722] to-[#E64A19] hover:from-[#F4511E] hover:to-[#D84315] text-white font-black text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all flex items-center justify-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>ADD • ₹30</span>
+                    <span>ADD • ₹{puriPrice}</span>
                   </button>
                 ) : (
                   <div className="flex items-center justify-between bg-neutral-900 border border-[#FF5722] rounded-xl p-1 shadow-md">
@@ -725,7 +744,7 @@ export default function Home({ menu = {}, loading = false, onOpenCart, onChangeT
             <RotiBreadIcon className="w-8 h-8 shrink-0 drop-shadow-[0_2px_8px_rgba(255,160,0,0.3)]" />
             <div>
               <h3 className="text-xs font-black text-white">Ordering Curry or Thali? Pair with Tandoori Roti & Parathas!</h3>
-              <p className="text-[11px] text-neutral-400 font-medium">Add Tandoori Roti (₹8), Lacchha Paratha (₹25) or Chawal Combo (₹30) in your basket.</p>
+              <p className="text-[11px] text-neutral-400 font-medium">Add freshly made Tandoori Roti, Lacchha Paratha, or Chawal Combo in your basket.</p>
             </div>
           </div>
         </div>

@@ -102,13 +102,36 @@ async function createOrder(req, res) {
     const isCurryOrThali = (name = '', cat = '') => {
       const n = (name || '').toLowerCase();
       const c = (cat || '').toLowerCase();
-      return c === 'curry' || c === 'thali' || n.includes('curry') || n.includes('kari') || n.includes('thali');
+      return (
+        c === 'curry' ||
+        c === 'thali' ||
+        n.includes('curry') ||
+        n.includes('kari') ||
+        n.includes('thali') ||
+        n.includes('sabji') ||
+        n.includes('sabzi') ||
+        n.includes('puri') ||
+        n.includes('biryani')
+      );
     };
     const isBreadOrAddon = (name = '', cat = '', id = 0) => {
       const n = (name || '').toLowerCase();
       const c = (cat || '').toLowerCase();
       const numId = Number(id);
-      return [15, 16, 21].includes(numId) || c === 'breads' || c === 'roti' || n.includes('roti') || n.includes('paratha') || n.includes('naan');
+      // Standalone meals with sabzi (like Roti Sabji, Puri Sabji) are complete meals, NOT plain breads!
+      if (n.includes('sabji') || n.includes('sabzi')) return false;
+      return (
+        [15, 16, 21].includes(numId) ||
+        c === 'breads' ||
+        c === 'roti' ||
+        n.includes('tandoori roti') ||
+        n.includes('paratha') ||
+        n.includes('naan') ||
+        n.includes('kulcha') ||
+        n.includes('chawal+roti') ||
+        (n.includes('chawal') && n.includes('roti')) ||
+        (n.includes('roti') && !n.includes('sabji') && !n.includes('sabzi'))
+      );
     };
 
     let hasCurryOrThaliDish = false;
