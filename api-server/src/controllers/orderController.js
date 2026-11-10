@@ -182,12 +182,22 @@ async function createOrder(req, res) {
       });
     }
 
+    // Helper to identify Sector 5 drop points
+    const isSector5Location = (loc) => {
+      if (!loc) return false;
+      const name = typeof loc === 'string' ? loc : (loc.name || loc.campus_name || '');
+      return /sector[\s_-]*5\b/i.test(name) || name.toLowerCase().includes('sector 5');
+    };
+
     // Delivery Fee calculation
     let deliveryFee = 0;
     if (is_outlet_order) {
       deliveryFee = 0; // Self-pickup
+    } else if (isSector5Location(location)) {
+      // Sector 5 drop points always have flat ₹10 delivery charges even for orders >= ₹100
+      deliveryFee = (baseDeliveryFee === 15 ? 10 : baseDeliveryFee);
     } else {
-      // Campus delivery logic using DB settings
+      // Campus delivery logic using DB settings (Free delivery for >= freeThreshold)
       deliveryFee = totalCustomerPrice >= freeThreshold ? 0 : (baseDeliveryFee === 15 ? 10 : baseDeliveryFee);
     }
 

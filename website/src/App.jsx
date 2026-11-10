@@ -79,6 +79,13 @@ function WebsiteContent() {
 
   const [locations, setLocations] = useState([]);
   const [activeLocation, setActiveLocation] = useState(null);
+  const { setSelectedLocation } = useCart();
+
+  useEffect(() => {
+    if (activeLocation) {
+      setSelectedLocation(activeLocation);
+    }
+  }, [activeLocation, setSelectedLocation]);
 
   // Track page view events
   useEffect(() => {

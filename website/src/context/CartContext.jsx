@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { isCurryOrThaliItem, isBreadOrAddonItem } from '../utils/comboValidation';
+import { isCurryOrThaliItem, isBreadOrAddonItem, isSector5Location } from '../utils/comboValidation';
 import { trackCartAdd, trackCartRemove } from '../utils/activityTracker';
 
 const CartContext = createContext(null);
@@ -30,6 +30,26 @@ export function CartProvider({ children }) {
       }
     }
   }, [cartItems]);
+
+  const [selectedLocation, setSelectedLocation] = useState(() => {
+    try {
+      const saved = localStorage.getItem('2roti_selected_location');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const updateSelectedLocation = React.useCallback((loc) => {
+    setSelectedLocation(loc);
+    try {
+      if (loc) {
+        localStorage.setItem('2roti_selected_location', JSON.stringify(loc));
+      } else {
+        localStorage.removeItem('2roti_selected_location');
+      }
+    } catch (e) {}
+  }, []);
 
   const [sysSettings, setSysSettings] = useState({ delivery_fee: 10, free_delivery_threshold: 100 });
 
@@ -139,9 +159,14 @@ export function CartProvider({ children }) {
   }, [cartItems]);
   
   // Delivery Fee calculation
-  // Outlet order: 0 delivery fee; Campus order: 0 if itemsTotal >= threshold, else fee
+  // Outlet order: 0 delivery fee;
+  // Sector 5 drop points: always ₹10 fee (even for orders >= ₹100);
+  // Standard campus order: 0 if itemsTotal >= threshold, else fee
+  const isSector5 = isSector5Location(selectedLocation);
   const activeDeliveryFee = sysSettings.delivery_fee === 15 ? 10 : (sysSettings.delivery_fee || 10);
-  const deliveryFee = hasOutletItems ? 0 : (itemsTotal >= sysSettings.free_delivery_threshold || itemsTotal === 0 ? 0 : activeDeliveryFee);
+  const deliveryFee = hasOutletItems || itemsTotal === 0
+    ? 0
+    : (isSector5 ? activeDeliveryFee : (itemsTotal >= sysSettings.free_delivery_threshold ? 0 : activeDeliveryFee));
   const grandTotal = itemsTotal + deliveryFee;
 
   // Data Structure Optimization: O(1) Map hash index for instant item quantity queries
@@ -171,6 +196,9 @@ export function CartProvider({ children }) {
         deliveryFee,
         grandTotal,
         hasOutletItems,
+        selectedLocation,
+        setSelectedLocation: updateSelectedLocation,
+        isSector5,
         getItemQty,
         addToCart,
         removeFromCart,

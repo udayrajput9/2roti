@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Lock, ShieldCheck, AlertTriangle, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { isCurryOrThaliItem, isBreadOrAddonItem } from '../utils/comboValidation';
+import { isCurryOrThaliItem, isBreadOrAddonItem, isSector5Location } from '../utils/comboValidation';
 
 const RAZORPAY_KEY = 'rzp_test_2rotiDemoKey123'; // Used strictly as a fallback if window.razorpayKey is not set
 
@@ -18,6 +18,7 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
   const [idempotencyKey] = useState(() => Math.random().toString(36).substring(2, 15) + Date.now().toString(36));
 
   const chosenLocation = activeLocation || locations[0];
+  const isSector5 = isSector5Location(chosenLocation);
   const halted = isHalted || isPaymentsStopped;
 
   useEffect(() => {
@@ -169,9 +170,16 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
             {error}
           </div>
         )}
-        <div className="p-3 bg-neutral-900/50 rounded-2xl border border-neutral-800">
-          <p className="text-sm font-bold text-white mb-1">Delivering To:</p>
-          <p className="text-xs text-neutral-400">{hasOutletItems ? 'Jhungiya Outlet Counter' : chosenLocation?.name}</p>
+        <div className="p-3 bg-neutral-900/50 rounded-2xl border border-neutral-800 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-bold text-white mb-0.5">Delivering To:</p>
+            <p className="text-xs text-neutral-400">{hasOutletItems ? 'Jhungiya Outlet Counter' : chosenLocation?.name}</p>
+          </div>
+          {!hasOutletItems && isSector5 && (
+            <span className="text-[10px] font-bold text-amber-400 bg-amber-950/60 border border-amber-800/40 px-2 py-1 rounded-xl">
+              ₹10 Flat Delivery Point
+            </span>
+          )}
         </div>
 
         {/* Campus Delivery Timing Note */}
@@ -208,7 +216,14 @@ export default function CheckoutPage({ onBack, onOrderSuccess, locations = [], a
         </div>
 
         <div className="flex justify-between text-neutral-400 items-center">
-          <span>Campus Delivery Charges</span>
+          <div className="flex items-center gap-1.5">
+            <span>Campus Delivery Charges</span>
+            {isSector5 && (
+              <span className="text-[10px] text-amber-400 font-bold bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800/60">
+                Sector 5
+              </span>
+            )}
+          </div>
           {deliveryFee === 0 ? (
             <span className="text-emerald-400 font-bold text-[11px] bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800/60">
               FREE

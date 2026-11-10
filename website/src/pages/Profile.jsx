@@ -871,7 +871,7 @@ export default function ProfilePage({
               <strong className="text-neutral-200 block">📦 Delivery Protocol:</strong>
               <p>• For Buddha, KIPM & ITM campuses, runners deliver right to the main hostel gate entrance.</p>
               <p>• Keep your phone active so our delivery runner can call you upon arrival.</p>
-              <p>• Orders above ₹100 qualify for 100% Free Campus Delivery.</p>
+              <p>• Orders above ₹100 qualify for 100% Free Campus Delivery (Flat ₹10 fee applies to Sector 5 drop points).</p>
             </div>
           </div>
         </div>

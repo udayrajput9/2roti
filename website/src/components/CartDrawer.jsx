@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, MapPin, Sparkles, ShieldCheck, Zap, Clock, AlertTriangle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { FoodClassBadge, RotiBreadIcon } from './FoodIcons';
-import { isCurryOrThaliItem, isBreadOrAddonItem } from '../utils/comboValidation';
+import { isCurryOrThaliItem, isBreadOrAddonItem, isSector5Location } from '../utils/comboValidation';
 
 const RECOMMENDED_ADDONS = [
   {
@@ -43,8 +43,12 @@ const RECOMMENDED_ADDONS = [
   }
 ];
 
-export default function CartDrawer({ isOpen, onClose, onProceedToCheckout, allMenuItems = [], outletItems = [] }) {
-  const { cartItems, totalCount, itemsTotal, deliveryFee, grandTotal, hasOutletItems, addToCart, updateQuantity, removeFromCart, isPaymentsStopped, paymentsClosedMessage } = useCart();
+export default function CartDrawer({ isOpen, onClose, onProceedToCheckout, allMenuItems = [], outletItems = [], activeLocation = null }) {
+  const { cartItems, totalCount, itemsTotal, deliveryFee, grandTotal, hasOutletItems, selectedLocation, isSector5: cartIsSector5, addToCart, updateQuantity, removeFromCart, isPaymentsStopped, paymentsClosedMessage } = useCart();
+
+  const currentLoc = activeLocation || selectedLocation;
+  const isSector5 = Boolean(cartIsSector5 || isSector5Location(currentLoc));
+  const locationDisplayName = currentLoc?.name || (isSector5 ? 'Sector 5 Drop Point' : 'Campus Gate');
 
   if (!isOpen) return null;
 
@@ -109,27 +113,46 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout, allMe
 
           {/* Free Delivery Progress Meter */}
           {!hasOutletItems && cartItems.length > 0 && (
-            <div className="mt-3 p-3 rounded-2xl bg-[#181818] border border-neutral-800/80">
-              <div className="flex items-center justify-between text-[11px] font-bold mb-1.5">
-                {remainingForFreeDelivery > 0 ? (
-                  <span className="text-neutral-300">
-                    Add <strong className="text-amber-400">₹{remainingForFreeDelivery.toFixed(0)}</strong> more for FREE delivery
+            isSector5 ? (
+              <div className="mt-3 p-3 rounded-2xl bg-[#181818] border border-amber-600/40 shadow-sm">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span className="font-black text-amber-400 uppercase tracking-wider text-[11px]">
+                      {locationDisplayName}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-neutral-400 bg-neutral-900 px-2 py-0.5 rounded-full border border-neutral-800">
+                    Standard Campus Fee
                   </span>
-                ) : (
-                  <span className="text-emerald-400 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>FREE Campus Delivery Unlocked!</span>
-                  </span>
-                )}
-                <span className="text-neutral-400 text-[10px]">₹{itemsTotal.toFixed(0)}/₹100</span>
+                </div>
+                <p className="text-[11px] text-neutral-300 mt-1.5 font-medium leading-tight">
+                  Flat ₹10 delivery charges apply to Sector 5 drop points on all orders.
+                </p>
               </div>
-              <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#FF5722] to-emerald-400 transition-all duration-300 rounded-full"
-                  style={{ width: `${freeDeliveryProgress}%` }}
-                />
+            ) : (
+              <div className="mt-3 p-3 rounded-2xl bg-[#181818] border border-neutral-800/80">
+                <div className="flex items-center justify-between text-[11px] font-bold mb-1.5">
+                  {remainingForFreeDelivery > 0 ? (
+                    <span className="text-neutral-300">
+                      Add <strong className="text-amber-400">₹{remainingForFreeDelivery.toFixed(0)}</strong> more for FREE delivery
+                    </span>
+                  ) : (
+                    <span className="text-emerald-400 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>FREE Campus Delivery Unlocked!</span>
+                    </span>
+                  )}
+                  <span className="text-neutral-400 text-[10px]">₹{itemsTotal.toFixed(0)}/₹100</span>
+                </div>
+                <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#FF5722] to-emerald-400 transition-all duration-300 rounded-full"
+                    style={{ width: `${freeDeliveryProgress}%` }}
+                  />
+                </div>
               </div>
-            </div>
+            )
           )}
         </div>
 
@@ -304,7 +327,14 @@ export default function CartDrawer({ isOpen, onClose, onProceedToCheckout, allMe
                     FREE {hasOutletItems ? '(Outlet)' : '(Promo)'}
                   </span>
                 ) : (
-                  <span className="font-bold text-white">₹{deliveryFee.toFixed(2)}</span>
+                  <div className="flex items-center gap-1.5">
+                    {isSector5 && (
+                      <span className="text-[10px] text-amber-400 font-bold bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/40">
+                        Sector 5
+                      </span>
+                    )}
+                    <span className="font-bold text-white">₹{deliveryFee.toFixed(2)}</span>
+                  </div>
                 )}
               </div>
 

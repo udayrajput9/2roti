@@ -50,3 +50,9 @@ export function hasOrphanBreadsInCart(cartItems = []) {
   if (hasBase) return false;
   return cartItems.some(item => isBreadOrAddonItem(item) && item.quantity > 0);
 }
+
+export function isSector5Location(loc) {
+  if (!loc) return false;
+  const name = typeof loc === 'string' ? loc : (loc.name || loc.campus_name || loc.location_name || '');
+  return /sector[\s_-]*5\b/i.test(name) || name.toLowerCase().includes('sector 5');
+}
