@@ -17,7 +17,7 @@ import Footer from './components/Footer';
 import PolicyModal from './components/PolicyModal';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
+import { CartProvider, useCart } from './context/CartContext';
 import { trackPageView, trackOnboardingView } from './utils/activityTracker';
 
 function WebsiteContent() {
